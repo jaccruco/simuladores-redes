@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simuladores didáticos de redes de computadores</title>
+<meta name="description" content="Simuladores interativos para o ensino de redes de computadores: switch Ethernet, protocolo ARP e Wi-Fi 802.11.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e6a8c'/%3E%3Ccircle cx='16' cy='9' r='3.5' fill='%23fff'/%3E%3Ccircle cx='8' cy='23' r='3.5' fill='%23fff'/%3E%3Ccircle cx='24' cy='23' r='3.5' fill='%23fff'/%3E%3Cpath d='M16 9 8 23M16 9l8 14M8 23h16' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f8;--card:#fff;--ink:#18212c;--mut:#5d6876;--line:#dbe1e7;--soft:#eef2f5;
+  --acc:#0e6a8c;--acc2:#e5f2f7;
+  --sw:#2457c5;--sw2:#e8eefb;
+  --arp:#c77700;--arp2:#fbf1e3;
+  --wifi:#0a8a5f;--wifi2:#e4f4ee;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 'IBM Plex Sans',system-ui,sans-serif}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+
+/* topo */
+header{background:#fff;border-bottom:1px solid var(--line)}
+header .wrap{padding-top:42px;padding-bottom:36px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:32px;align-items:center}
+@media (max-width:820px){header .wrap{grid-template-columns:1fr;padding-top:28px;padding-bottom:24px}.hero-art{display:none}}
+.kicker{font:600 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--acc);margin:0 0 12px}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 12px;letter-spacing:-.01em}
+.lead{margin:0;color:var(--mut);font-size:17px;max-width:58ch}
+.hero-art svg{width:100%;height:auto;display:block}
+
+/* seção */
+main{padding:34px 0 20px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);margin:0 0 14px;font-weight:600}
+
+/* cartões */
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+@media (max-width:980px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+.sim{--c:var(--acc);--c2:var(--acc2);display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;text-decoration:none;transition:transform .15s,box-shadow .15s,border-color .15s}
+.sim:hover,.sim:focus-visible{transform:translateY(-3px);box-shadow:0 10px 28px rgba(24,33,44,.10);border-color:var(--c)}
+.sim:focus-visible{outline:3px solid var(--c);outline-offset:2px}
+.sim.sw{--c:var(--sw);--c2:var(--sw2)}
+.sim.arp{--c:var(--arp);--c2:var(--arp2)}
+.sim.wifi{--c:var(--wifi);--c2:var(--wifi2)}
+.thumb{background:var(--c2);border-bottom:1px solid var(--line);padding:16px 18px}
+.thumb svg{width:100%;height:auto;display:block}
+.body{padding:16px 18px 18px;display:flex;flex-direction:column;flex:1}
+.layer{display:inline-block;align-self:flex-start;font:600 11.5px/1 var(--mono);color:var(--c);background:var(--c2);border-radius:999px;padding:5px 9px;margin-bottom:10px}
+.sim h3{margin:0 0 6px;font-size:19px;line-height:1.25}
+.sim p{margin:0 0 12px;color:var(--mut);font-size:14.5px}
+.sim ul{margin:0 0 16px;padding:0;list-style:none;font-size:14px}
+.sim li{padding:3px 0 3px 18px;position:relative}
+.sim li::before{content:"";position:absolute;left:2px;top:11px;width:7px;height:7px;border-radius:2px;background:var(--c)}
+.go{margin-top:auto;display:flex;align-items:center;justify-content:space-between;font-weight:600;color:var(--c);border-top:1px solid var(--soft);padding-top:12px}
+.go span:last-child{transition:transform .15s}
+.sim:hover .go span:last-child{transform:translateX(4px)}
+
+/* como usar */
+.how{margin-top:34px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+@media (max-width:820px){.how{grid-template-columns:1fr}}
+.how div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.how b{display:block;margin-bottom:4px}
+.how p{margin:0;color:var(--mut);font-size:14.5px}
+.num{font:600 12px/1 var(--mono);color:var(--acc);display:block;margin-bottom:8px}
+
+footer{color:var(--mut);font-size:13.5px;border-top:1px solid var(--line);margin-top:40px}
+footer .wrap{padding-top:18px;padding-bottom:28px;display:flex;flex-wrap:wrap;gap:8px 22px;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div>
+      <p class="kicker">Redes de computadores · material didático</p>
+      <h1>Simuladores interativos de redes</h1>
+      <p class="lead">Veja, passo a passo, o que acontece dentro da rede: como o switch aprende endereços MAC, como o ARP descobre quem é quem e como o sinal Wi-Fi se espalha pelos ambientes. Os simuladores rodam no navegador, sem instalar nada.</p>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 320 190" fill="none">
+        <path d="M60 150 160 95 260 150M160 95v-48" stroke="#c2ccd5" stroke-width="3"/>
+        <path d="M160 95 260 150" stroke="#2457c5" stroke-width="3" stroke-dasharray="6 6"/>
+        <rect x="126" y="80" width="68" height="30" rx="6" fill="#18212c"/>
+        <g fill="#5ec2e6"><circle cx="138" cy="95" r="3"/><circle cx="150" cy="95" r="3"/><circle cx="162" cy="95" r="3"/><circle cx="174" cy="95" r="3"/><circle cx="184" cy="95" r="3" fill="#475260"/></g>
+        <rect x="36" y="138" width="48" height="32" rx="5" fill="#fff" stroke="#18212c" stroke-width="2.5"/>
+        <rect x="236" y="138" width="48" height="32" rx="5" fill="#fff" stroke="#18212c" stroke-width="2.5"/>
+        <rect x="140" y="22" width="40" height="26" rx="5" fill="#fff" stroke="#18212c" stroke-width="2.5"/>
+        <path d="M150 18c6-6 14-6 20 0M144 12c9-9 23-9 32 0" stroke="#0a8a5f" stroke-width="2.5" stroke-linecap="round"/>
+        <rect x="196" y="112" width="34" height="16" rx="3" fill="#2457c5"/>
+        <text x="213" y="123.5" fill="#fff" font-family="IBM Plex Mono,monospace" font-size="9" text-anchor="middle">MAC</text>
+        <rect x="76" y="112" width="34" height="16" rx="3" fill="#c77700"/>
+        <text x="93" y="123.5" fill="#fff" font-family="IBM Plex Mono,monospace" font-size="9" text-anchor="middle">ARP</text>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <h2>Escolha um simulador</h2>
+  <div class="grid">
+
+    <a class="sim sw" href="switch/">
+      <div class="thumb" aria-hidden="true">
+        <svg viewBox="0 0 280 110" fill="none">
+          <rect x="70" y="40" width="140" height="30" rx="6" fill="#18212c"/>
+          <g fill="#5ec2e6"><circle cx="92" cy="55" r="4" fill="#4caf7a"/><circle cx="116" cy="55" r="4" fill="#2457c5"/><circle cx="140" cy="55" r="4"/><circle cx="164" cy="55" r="4"/><circle cx="188" cy="55" r="4" fill="#475260"/></g>
+          <path d="M92 40V14M116 40V14M92 70v26M140 70v26" stroke="#2457c5" stroke-width="2.5"/>
+          <rect x="78" y="4" width="28" height="12" rx="2" fill="#fff" stroke="#18212c" stroke-width="2"/>
+          <rect x="102" y="4" width="28" height="12" rx="2" fill="#fff" stroke="#18212c" stroke-width="2"/>
+          <rect x="78" y="94" width="28" height="12" rx="2" fill="#fff" stroke="#18212c" stroke-width="2"/>
+          <rect x="126" y="94" width="28" height="12" rx="2" fill="#fff" stroke="#18212c" stroke-width="2"/>
+          <rect x="222" y="22" width="52" height="66" rx="5" fill="#fff" stroke="#c4d1ee" stroke-width="1.5"/>
+          <g font-family="IBM Plex Mono,monospace" font-size="8" fill="#18212c"><text x="228" y="36">MAC  P</text><text x="228" y="52">AA → 1</text><text x="228" y="66">BB → 2</text><text x="228" y="80" fill="#8a96a4">…</text></g>
+          <path d="M6 28h40M6 55h40M6 82h40" stroke="#c4d1ee" stroke-width="6" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="body">
+        <span class="layer">Camada 2 · Enlace</span>
+        <h3>Switch Ethernet</h3>
+        <p>Como o switch monta a tabela MAC e decide por qual porta cada quadro sai.</p>
+        <ul>
+          <li>Aprendizado pela origem, encaminhamento pelo destino</li>
+          <li>Inundação, broadcast e host que muda de porta</li>
+          <li>Formato do quadro Ethernet II (opcional) e quiz</li>
+        </ul>
+        <div class="go"><span>Abrir simulador</span><span>→</span></div>
+      </div>
+    </a>
+
+    <a class="sim arp" href="arp/">
+      <div class="thumb" aria-hidden="true">
+        <svg viewBox="0 0 280 110" fill="none">
+          <path d="M40 60h200" stroke="#c2ccd5" stroke-width="3"/>
+          <rect x="16" y="44" width="46" height="32" rx="5" fill="#fff" stroke="#18212c" stroke-width="2.5"/>
+          <rect x="218" y="44" width="46" height="32" rx="5" fill="#fff" stroke="#18212c" stroke-width="2.5"/>
+          <text x="39" y="64" font-family="IBM Plex Sans,sans-serif" font-weight="700" font-size="12" fill="#18212c" text-anchor="middle">A</text>
+          <text x="241" y="64" font-family="IBM Plex Sans,sans-serif" font-weight="700" font-size="12" fill="#18212c" text-anchor="middle">B</text>
+          <rect x="72" y="18" width="128" height="22" rx="11" fill="#c77700"/>
+          <text x="136" y="33" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#fff" text-anchor="middle">Quem tem 10.0.0.2?</text>
+          <path d="M182 40l14 12" stroke="#c77700" stroke-width="2"/>
+          <rect x="88" y="80" width="112" height="22" rx="11" fill="#0a8a5f"/>
+          <text x="144" y="95" font-family="IBM Plex Mono,monospace" font-size="9.5" fill="#fff" text-anchor="middle">Sou eu: BB:BB…</text>
+          <path d="M96 80 80 70" stroke="#0a8a5f" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="body">
+        <span class="layer">Camadas 2 ↔ 3</span>
+        <h3>Protocolo ARP</h3>
+        <p>Como um host descobre o endereço MAC a partir de um endereço IP.</p>
+        <ul>
+          <li>Request em broadcast e Reply em unicast</li>
+          <li>Caches ARP se preenchendo a cada passo</li>
+          <li>Comunicação local, cache cheia e acesso via gateway</li>
+        </ul>
+        <div class="go"><span>Abrir simulador</span><span>→</span></div>
+      </div>
+    </a>
+
+    <a class="sim wifi" href="wifi/">
+      <div class="thumb" aria-hidden="true">
+        <svg viewBox="0 0 280 110" fill="none">
+          <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#0a8a5f" stop-opacity=".55"/><stop offset=".55" stop-color="#e3b230" stop-opacity=".35"/><stop offset="1" stop-color="#d0473a" stop-opacity=".08"/></radialGradient></defs>
+          <rect x="10" y="6" width="260" height="98" rx="4" fill="#fff" stroke="#18212c" stroke-width="2.5"/>
+          <circle cx="92" cy="55" r="80" fill="url(#g)"/>
+          <rect x="10" y="6" width="260" height="98" rx="4" fill="none" stroke="#18212c" stroke-width="2.5"/>
+          <path d="M150 6v40M150 66v38M150 56h120" stroke="#18212c" stroke-width="4"/>
+          <circle cx="92" cy="55" r="7" fill="#18212c"/>
+          <path d="M82 40c6-6 14-6 20 0M76 33c10-10 22-10 32 0" stroke="#18212c" stroke-width="2" stroke-linecap="round"/>
+          <rect x="200" y="20" width="56" height="18" rx="9" fill="#0a8a5f"/>
+          <text x="228" y="32.5" font-family="IBM Plex Mono,monospace" font-size="9" fill="#fff" text-anchor="middle">−67 dBm</text>
+        </svg>
+      </div>
+      <div class="body">
+        <span class="layer">Camada 1 · Física e 802.11</span>
+        <h3>Wi-Fi 802.11 (2,4 e 5 GHz)</h3>
+        <p>Cobertura, canais e segurança de redes sem fio em uma residência e em um escritório.</p>
+        <ul>
+          <li>Mapa de sinal com paredes, materiais e reflexões</li>
+          <li>Planejamento de canais, repetidor e mesh</li>
+          <li>Auditoria de segurança: senha, WPS e AP pirata</li>
+        </ul>
+        <div class="go"><span>Abrir simulador</span><span>→</span></div>
+      </div>
+    </a>
+
+  </div>
+
+  <section class="how" aria-label="Como usar">
+    <div><span class="num">01</span><b>Escolha o cenário</b><p>Cada simulador traz situações prontas, das mais simples às que exigem mais atenção.</p></div>
+    <div><span class="num">02</span><b>Avance no seu ritmo</b><p>Use Próximo e Anterior para seguir cada passo, ou mexa nos parâmetros e veja o efeito na hora.</p></div>
+    <div><span class="num">03</span><b>Confira o que aprendeu</b><p>Os quizzes corrigem na hora e explicam o porquê de cada resposta.</p></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Simuladores didáticos de redes de computadores · IFRN</span>
+    <span>Funciona no navegador, no computador ou no celular.</span>
+  </div>
+</footer>
+
+</body>
+</html>

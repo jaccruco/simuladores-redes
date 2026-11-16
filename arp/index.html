@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador do protocolo ARP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f8;--card:#fff;--ink:#18212c;--mut:#5d6876;--line:#dbe1e7;--soft:#eef2f5;
+  --acc:#0e6a8c;--acc2:#e5f2f7;
+  --req:#c77700;--rep:#0a8a5f;--icmp:#2457c5;--mono:'IBM Plex Mono',ui-monospace,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.5 'IBM Plex Sans',system-ui,sans-serif}
+header{padding:18px 22px 0;max-width:1120px;margin:0 auto}
+h1{font-size:22px;margin:0 0 2px}
+header p{margin:0;color:var(--mut)}
+nav{display:flex;gap:4px;margin-top:14px;border-bottom:1px solid var(--line)}
+nav button{border:0;background:none;padding:10px 16px;font:inherit;font-weight:600;color:var(--mut);cursor:pointer;border-bottom:3px solid transparent}
+nav button.on{color:var(--acc);border-bottom-color:var(--acc)}
+main{max-width:1120px;margin:0 auto;padding:16px 22px 44px}
+.tab{display:none}.tab.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+h3.lbl{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+
+/* seletor de cenário */
+.scen{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.scen button{flex:1 1 220px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 13px;cursor:pointer;font:inherit;color:inherit}
+.scen button.on{border-color:var(--acc);background:var(--acc2);box-shadow:inset 0 0 0 1px var(--acc)}
+.scen button b{display:block;font-size:14.5px}
+.scen button small{color:var(--mut);font-size:12.5px;line-height:1.35;display:block;margin-top:1px}
+
+/* topo + narração */
+.stage{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:stretch}
+@media (max-width:860px){.stage{grid-template-columns:1fr}}
+svg{width:100%;height:auto;display:block}
+.link{stroke:#c2ccd5;stroke-width:3}
+.dev rect.box{fill:#fff;stroke:#9aa7b4;stroke-width:1.5;transition:stroke .2s}
+.dev.router rect.box{fill:#eef6fb;stroke:var(--acc)}
+.dev.server rect.box{fill:#f7f4fd}
+.dev.active rect.box{stroke:var(--acc);stroke-width:4}
+.dev.dim{opacity:.4}
+.dev .nm{font-weight:700;font-size:14px;fill:var(--ink)}
+.dev .ad{font:11.5px var(--mono);fill:var(--mut)}
+.sw rect{fill:#26333f}.sw text{fill:#fff;font-weight:600;font-size:13px}
+.pkt rect{stroke:#fff;stroke-width:1.5}
+.pkt text{fill:#fff;font:600 12px 'IBM Plex Sans',sans-serif}
+.pkt.req rect{fill:var(--req)}.pkt.rep rect{fill:var(--rep)}.pkt.icmp rect{fill:var(--icmp)}.pkt.icmpr rect{fill:#4f7fe0}
+.discard{fill:#b23;font:700 20px sans-serif}
+
+.narr{display:flex;flex-direction:column}
+.narr .badge{display:inline-block;align-self:flex-start;font:600 11px var(--mono);color:#fff;border-radius:5px;padding:3px 8px;margin-bottom:8px}
+.badge.req{background:var(--req)}.badge.rep{background:var(--rep)}.badge.icmp{background:var(--icmp)}.badge.info{background:#5d6876}.badge.done{background:var(--rep)}
+.narr h2{font-size:17px;margin:0 0 7px}
+.narr p{margin:0 0 8px}
+.narr .hint{color:var(--mut);font-size:14px}
+.steps{margin-top:auto;padding-top:14px}
+.dots{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
+.dots i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--acc)}.dots i.past{background:#9fc3d4}
+.sbtns{display:flex;gap:8px;align-items:center}
+.btn{font:inherit;font-weight:600;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;cursor:pointer}
+.btn.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:hover:not(:disabled){filter:brightness(.96)}
+.stepno{margin-left:auto;font:12.5px var(--mono);color:var(--mut)}
+
+/* caches */
+.caches{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px;margin-top:16px}
+.cc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.cc.act{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc2)}
+.cc h4{margin:0;font-size:14.5px}
+.cc .sub{font:11.5px var(--mono);color:var(--mut);margin:1px 0 8px}
+.cc table{width:100%;border-collapse:collapse;font:12.5px var(--mono)}
+.cc th{text-align:left;font:600 11px 'IBM Plex Sans';color:var(--mut);border-bottom:1px solid var(--line);padding:3px 2px}
+.cc td{padding:4px 2px;border-bottom:1px solid var(--soft)}
+.cc .empty{color:#9aa5b1;font-size:13px;font-style:italic;padding:6px 0}
+.cc tr.flash td{animation:fl 1.5s}
+@keyframes fl{0%{background:#ffe7a6}100%{background:transparent}}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--mut);margin:10px 2px 0}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* quiz */
+.qwrap{max-width:780px}
+.qhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.score{font-size:15px;font-weight:600}
+.bar{height:8px;background:var(--soft);border-radius:5px;overflow:hidden;width:200px}
+.bar i{display:block;height:100%;background:var(--rep);width:0;transition:width .3s}
+.q{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px 17px;margin-bottom:12px}
+.q .qt{font-weight:600;margin-bottom:10px}
+.q .qt span{color:var(--acc);margin-right:6px}
+.opt{display:block;width:100%;text-align:left;font:inherit;border:1px solid var(--line);background:#fff;border-radius:9px;padding:10px 13px;margin:6px 0;cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--acc);background:var(--acc2)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--rep);background:#e5f6ef}
+.opt.wrong{border-color:#cc2b2b;background:#fdeaea}
+.fb{display:none;margin-top:8px;font-size:14px;padding:10px 13px;border-radius:9px;background:var(--soft)}
+.fb.show{display:block}
+.fb b.ok{color:var(--rep)}.fb b.no{color:#cc2b2b}
+</style>
+</head>
+<body>
+<a href="../" style="position:fixed;right:14px;bottom:14px;z-index:9999;background:#18212c;color:#fff;font:600 13px/1 'IBM Plex Sans',system-ui,sans-serif;text-decoration:none;padding:9px 13px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.18)">← Todos os simuladores</a>
+
+<header>
+  <h1>Simulador do protocolo ARP</h1>
+  <p>Avance passo a passo e veja a cache ARP de cada dispositivo se preencher.</p>
+  <nav>
+    <button class="on" data-tab="sim">Simulador</button>
+    <button data-tab="quiz">Quiz</button>
+  </nav>
+</header>
+<main>
+<section id="sim" class="tab on">
+  <div class="scen" id="scen"></div>
+  <div class="stage">
+    <div class="card" style="padding:10px">
+      <svg id="svg" viewBox="0 0 740 360" role="img" aria-label="Topologia da rede">
+        <g id="links"></g><g id="devs"></g><g id="pkts"></g>
+      </svg>
+      <div class="legend">
+        <span><i style="background:var(--req)"></i>ARP Request (broadcast)</span>
+        <span><i style="background:var(--rep)"></i>ARP Reply (unicast)</span>
+        <span><i style="background:var(--icmp)"></i>Ping (ICMP)</span>
+      </div>
+    </div>
+    <div class="card narr">
+      <span class="badge info" id="badge">Início</span>
+      <h2 id="stTitle">Escolha um cenário acima</h2>
+      <p id="stText">Cada cenário é uma sequência curta. Use <b>Próximo</b> para avançar e observe as caches embaixo.</p>
+      <p class="hint" id="stHint"></p>
+      <div class="steps">
+        <div class="dots" id="dots"></div>
+        <div class="sbtns">
+          <button class="btn" id="prevBtn">◀ Anterior</button>
+          <button class="btn pri" id="nextBtn">Próximo ▶</button>
+          <button class="btn" id="restartBtn">Reiniciar</button>
+          <span class="stepno" id="stepNo"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <h3 class="lbl" style="margin:18px 0 0">Cache ARP de cada dispositivo (IP → MAC)</h3>
+  <div class="caches" id="caches"></div>
+</section>
+
+<section id="quiz" class="tab">
+ <div class="qwrap">
+  <div class="qhead">
+   <div><div class="score" id="score">0 de 0 respondidas</div><div class="bar"><i id="scoreBar"></i></div></div>
+   <button class="btn" id="quizReset">Refazer o quiz</button>
+  </div>
+  <div id="qlist"></div>
+ </div>
+</section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,2377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador Wi-Fi 802.11 — 2,4 GHz e 5 GHz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f1ec; --card:#ffffff; --ink:#1d232b; --muted:#5d6672; --line:#e2ded6;
+  --accent:#0f766e; --accent-soft:#e3f2ef; --warn:#b45309; --bad:#b91c1c;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:14px;line-height:1.45}
+header{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:12px 20px;background:#14202b;color:#fff}
+header h1{font-size:17px;margin:0;font-weight:600;letter-spacing:.2px}
+header h1 small{display:block;font-size:12px;font-weight:400;color:#9fb2c2}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+nav.tabs a{color:#cfdbe5;text-decoration:none;padding:7px 12px;border-radius:7px;font-weight:500;font-size:13.5px}
+nav.tabs a:hover{background:#22313f}
+nav.tabs a.active{background:#fff;color:#14202b}
+main{padding:14px 16px 30px;max-width:1600px;margin:0 auto}
+section.view{display:none}
+section.view.active{display:block}
+.sim{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+@media (max-width:1000px){.sim{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.stagewrap{padding:10px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#faf9f6}
+.seg button{border:0;background:transparent;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink);border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:#fff}
+.seg button:hover:not(.on){background:#efece6}
+.toolbar .lbl{font-size:12px;color:var(--muted);margin-right:-2px}
+.stage{position:relative;width:100%;user-select:none;-webkit-user-select:none}
+canvas#plan{display:block;border-radius:8px;background:#fbfaf7;touch-action:none}
+.hud{position:absolute;left:10px;top:10px;background:rgba(20,32,43,.86);color:#fff;font-family:var(--mono);font-size:12px;padding:6px 9px;border-radius:7px;pointer-events:none;white-space:nowrap}
+.hud:empty{display:none}
+.busy{position:absolute;right:10px;top:10px;background:#fff;border:1px solid var(--line);font-size:12px;padding:4px 9px;border-radius:7px;display:none}
+.legend{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
+.legend .bar{height:12px;width:260px;border-radius:3px;border:1px solid #0001}
+.legend .ticks{display:flex;justify-content:space-between;width:260px;font-family:var(--mono);font-size:10.5px}
+.legend .chip{display:inline-flex;align-items:center;gap:5px;margin-right:6px}
+.legend .chip i{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid #0002}
+.observe{margin-top:10px;padding:10px 12px;background:var(--accent-soft);border-radius:9px;font-size:13.5px}
+.observe b{color:var(--accent)}
+.matbar{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:8px;font-size:12px;color:var(--muted)}
+.matbar span{display:inline-flex;align-items:center;gap:5px}
+.matbar i{width:16px;height:5px;border-radius:2px;display:inline-block}
+aside.panel{display:flex;flex-direction:column;gap:12px}
+.box{padding:12px 14px}
+.box h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+.row label{font-size:13px;min-width:92px;color:var(--muted)}
+.row input[type=range]{flex:1;min-width:110px;accent-color:var(--accent)}
+.row output,.mono{font-family:var(--mono);font-size:12.5px}
+select,input[type=number],input[type=text]{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+button.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;padding:6px 10px;border-radius:7px;cursor:pointer}
+button.btn:hover{background:#f2efe9}
+button.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+button.btn.primary:hover{background:#0b5e58}
+button.btn.danger{color:var(--bad)}
+.tools{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.tools button{font:inherit;font-size:12px;padding:7px 2px;border:1px solid var(--line);border-radius:7px;background:#faf9f6;cursor:pointer;line-height:1.15}
+.tools button .ic{display:block;font-size:16px;margin-bottom:2px}
+.tools button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.matlist{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px}
+.matlist button{display:flex;align-items:center;gap:6px;font:inherit;font-size:12px;text-align:left;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}
+.matlist button i{width:14px;height:14px;border-radius:3px;flex:none}
+.matlist button.on{outline:2px solid var(--accent);outline-offset:-1px}
+table.kv{width:100%;border-collapse:collapse;font-size:12.5px}
+table.kv td{padding:3px 4px;border-bottom:1px solid #f0ede7;vertical-align:top}
+table.kv td:last-child{text-align:right;font-family:var(--mono)}
+table.kv tr.tot td{font-weight:600;border-top:1px solid var(--line)}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.cmp div{border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.cmp div.cur{border-color:var(--accent);background:var(--accent-soft)}
+.cmp .big{font-family:var(--mono);font-size:16px;font-weight:500}
+.cmp small{color:var(--muted);display:block;font-size:11.5px}
+.stat{margin:6px 0}
+.stat .t{display:flex;justify-content:space-between;font-size:12.5px}
+.stat .b{height:7px;background:#ece8e1;border-radius:4px;overflow:hidden;margin-top:2px}
+.stat .b i{display:block;height:100%;background:var(--accent)}
+details summary{cursor:pointer;font-weight:600;font-size:13px}
+details ol{padding-left:18px;margin:8px 0 0;font-size:13px}
+details ol li{margin-bottom:5px}
+.hint{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;background:#eee;color:#333;font-family:var(--mono)}
+/* Lab */
+.lab{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px}
+@media (max-width:1000px){.lab{grid-template-columns:1fr}}
+.lab canvas{width:100%;display:block;border-radius:8px;background:#fbfaf7}
+.fr{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.fr div{border:1px solid var(--line);border-radius:9px;padding:8px}
+.fr .big{font-family:var(--mono);font-size:18px}
+.fr small{display:block;color:var(--muted);font-size:12px}
+.prose{max-width:1100px}
+.prose h2{font-size:18px;margin:22px 0 8px}
+.prose p,.prose li{font-size:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+table.tbl{border-collapse:collapse;width:100%;font-size:13px;background:#fff}
+table.tbl th,table.tbl td{border:1px solid var(--line);padding:5px 8px;text-align:left}
+table.tbl th{background:#f6f4ef;font-weight:600}
+table.tbl td.n{font-family:var(--mono);text-align:right}
+.eq{font-family:var(--mono);background:#fff;border:1px solid var(--line);padding:8px 10px;border-radius:8px;display:inline-block;font-size:13px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px}
+/* Segurança / modal */
+.score{display:flex;align-items:center;gap:10px;margin:2px 0 6px}
+.score .num{font-family:var(--mono);font-size:26px;font-weight:500}
+.score .bar{flex:1;height:10px;background:#ece8e1;border-radius:5px;overflow:hidden}
+.score .bar i{display:block;height:100%}
+.sev{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;white-space:nowrap}
+.sev.ok{background:#e5f4e4;color:#1e6b35}.sev.alerta{background:#f9eeda;color:#8a5a00}.sev.falha{background:#fbebeb;color:#a11d1d}.sev.info{background:#e7f1fb;color:#1d4f8a}
+.sev.pos{background:#fbebeb;color:#a11d1d}.sev.dif{background:#f9eeda;color:#8a5a00}.sev.blo{background:#e5f4e4;color:#1e6b35}
+ul.issues{margin:4px 0 6px;padding-left:16px;font-size:12.5px}
+ul.issues li{margin-bottom:3px}
+.modal{position:fixed;inset:0;background:rgba(15,22,30,.55);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:3vh 12px;overflow:auto}
+.modal.on{display:flex}
+.mcard{background:#fff;border-radius:12px;width:min(1080px,100%);box-shadow:0 20px 60px #0005;overflow:hidden}
+.mhead{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#14202b;color:#fff}
+.mhead b{font-size:15px}.mhead .sp{flex:1}
+.mhead button{background:transparent;border:1px solid #ffffff55;color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit}
+.rui{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:460px}
+@media (max-width:760px){.rui{grid-template-columns:1fr}}
+.rui nav{background:#1f2d3a;padding:8px}
+.rui nav button{display:block;width:100%;text-align:left;background:transparent;border:0;color:#c9d6e2;padding:8px 10px;border-radius:6px;font:inherit;font-size:13.5px;cursor:pointer}
+.rui nav button.on{background:#0f766e;color:#fff}
+.rui nav .brand{color:#fff;font-weight:600;padding:6px 10px 10px;font-size:13px;border-bottom:1px solid #ffffff22;margin-bottom:6px}
+.rui nav .brand small{display:block;color:#9fb2c2;font-weight:400}
+.rui .pg{padding:14px 18px}
+.rui .pg h4{margin:0 0 10px;font-size:16px}
+.fld{display:grid;grid-template-columns:190px minmax(0,1fr);gap:6px 12px;align-items:center;margin:8px 0}
+.fld label{font-size:13px;color:var(--muted)}
+.fld .help{grid-column:2;font-size:12px;color:var(--muted);margin-top:-4px}
+.msg{font-size:12.5px;padding:7px 10px;border-radius:7px;margin:6px 0}
+.msg.err{background:#fbebeb;color:#8b1a1a}.msg.warn{background:#f9eeda;color:#7a4f00}.msg.ok{background:#e5f4e4;color:#1e6b35}.msg.inf{background:#e7f1fb;color:#1d4f8a}
+.meter{height:7px;border-radius:4px;background:#ece8e1;overflow:hidden;width:220px;display:inline-block;vertical-align:middle;margin-right:8px}
+.meter i{display:block;height:100%}
+table.at{width:100%;border-collapse:collapse;font-size:12.5px}
+table.at th,table.at td{border-bottom:1px solid #eee;padding:6px 6px;text-align:left;vertical-align:top}
+table.at th{background:#f6f4ef;font-weight:600}
+.apPick{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px}
+.apPick button{font:inherit;font-size:12px;padding:6px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;text-align:left}
+.apPick button.on{outline:2px solid var(--accent);outline-offset:-1px}
+/* Dispositivos */
+.devgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
+.dev{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.dev .hd{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.dev .hd svg{flex:none;width:64px;height:48px}
+.dev h4{margin:0;font-size:15px}.dev .tag{font-size:11.5px;color:var(--muted)}
+.dev dl{margin:0;font-size:12.8px}.dev dt{font-weight:600;margin-top:6px}.dev dd{margin:0;color:#333}
+.quiz{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+.quiz .opts{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.quiz .opts button{font:inherit;font-size:13px;border:1px solid var(--line);background:#faf9f6;border-radius:7px;padding:6px 10px;cursor:pointer}
+.quiz .opts button.right{background:#e5f4e4;border-color:#2a9d8f}.quiz .opts button.wrong{background:#fbebeb;border-color:#d7443a}
+</style>
+</head>
+<body>
+<a href="../" style="position:fixed;right:14px;bottom:14px;z-index:9999;background:#18212c;color:#fff;font:600 13px/1 'IBM Plex Sans',system-ui,sans-serif;text-decoration:none;padding:9px 13px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.18)">← Todos os simuladores</a>
+
+<header>
+  <h1>Simulador didático de redes Wi-Fi 802.11<small>Infraestrutura de redes sem fio · dispositivos, instalação, propagação em 2,4/5 GHz e segurança</small></h1>
+  <nav class="tabs" id="tabs">
+    <a href="#residencia" data-v="residencia">🏠 Residência</a>
+    <a href="#corporativo" data-v="corporativo">🏢 Escritório corporativo</a>
+    <a href="#dispositivos" data-v="dispositivos">🧰 Dispositivos</a>
+    <a href="#laboratorio" data-v="laboratorio">🔬 Laboratório de materiais</a>
+    <a href="#conceitos" data-v="conceitos">📘 Conceitos</a>
+  </nav>
+</header>
+<main>
+<!-- ================= SIMULADOR (residência / corporativo) ================= -->
+<section class="view" id="v-sim">
+  <div class="sim">
+    <div class="card stagewrap">
+      <div class="toolbar">
+        <span class="lbl">Banda</span>
+        <div class="seg" id="bandSeg"><button data-b="b24">2,4 GHz</button><button data-b="b5">5 GHz</button></div>
+        <span class="lbl">Visualizar</span>
+        <div class="seg" id="viewSeg">
+          <button data-w="rssi">Sinal (RSSI)</button>
+          <button data-w="sinr">SINR</button>
+          <button data-w="rate">Taxa</button>
+          <button data-w="best">Melhor AP</button>
+          <button data-w="cocanal">Co-canal</button>
+          <button data-w="raios">Raios</button>
+          <button data-w="expo">Exposição</button>
+        </div>
+      </div>
+      <div class="stage" id="stage">
+        <canvas id="plan"></canvas>
+        <div class="hud" id="hud"></div>
+        <div class="busy" id="busy">Calculando…</div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="matbar" id="matbar"></div>
+      <div class="observe" id="observe"></div>
+    </div>
+
+    <aside class="panel">
+      <div class="card box">
+        <h3>Ferramentas</h3>
+        <div class="tools" id="tools">
+          <button data-t="mover"><span class="ic">✋</span>Mover</button>
+          <button data-t="ap"><span class="ic">📡</span>+ AP</button>
+          <button data-t="parede"><span class="ic">▭</span>Parede</button>
+          <button data-t="pintar"><span class="ic">🖌</span>Material</button>
+          <button data-t="apagar"><span class="ic">✖</span>Apagar</button>
+        </div>
+        <div id="matPick">
+          <div class="matlist" id="matlist"></div>
+          <div class="row"><label>Espessura</label><input type="number" id="newT" step="0.01" min="0.005" max="0.6" style="width:80px"> <span class="hint">m (nova parede)</span></div>
+        </div>
+        <div id="apPickBox"><div class="apPick" id="apPick"></div></div>
+        <p class="hint" id="toolHint" style="margin:6px 0 0"></p>
+      </div>
+
+      <div class="card box" id="selBox"><h3>Selecionado</h3><div id="selBody" class="hint">Clique em um AP, parede ou objeto para editar.</div></div>
+
+      <div class="card box" id="secBox">
+        <h3>Segurança da rede 🔒</h3>
+        <div id="secBody"></div>
+        <div class="row" style="gap:6px"><button class="btn primary" id="openCfg">⚙ Configurar a rede</button><button class="btn" id="openAudit">Auditoria e ataques</button></div>
+      </div>
+
+      <div class="card box" id="atkBox" style="display:none">
+        <h3>Atacante na rua 🕵</h3>
+        <div id="atkBody"></div>
+        <div class="row"><label><input type="checkbox" id="atkDir"> Antena direcional (+15 dBi)</label></div>
+        <p class="hint" style="margin:4px 0 0">Arraste o ícone vermelho. A vista Exposição mostra até onde a rede pode ser captada fora do imóvel.</p>
+      </div>
+
+      <div class="card box" id="rayBox" style="display:none">
+        <h3>Traçado de raios</h3>
+        <div class="row"><label>Nº de raios</label><input type="range" id="rayN" min="12" max="360" step="12" value="120"><output id="rayNo"></output></div>
+        <div class="row"><label>Interações</label><input type="range" id="rayD" min="0" max="5" step="1" value="3"><output id="rayDo"></output></div>
+        <div class="row"><label><input type="checkbox" id="rayR" checked> Reflexão</label><label><input type="checkbox" id="rayT" checked> Transmissão</label></div>
+        <div class="row"><button class="btn primary" id="rayAnim">▶ Animar propagação</button></div>
+        <p class="hint">Os raios saem do AP selecionado. Cor = potência ao longo do caminho. ● laranja: reflexão · ● roxo: refração/absorção ao atravessar a parede.</p>
+      </div>
+
+      <div class="card box">
+        <h3>Dispositivo cliente 💻</h3>
+        <div id="clientBody"></div>
+        <p class="hint" style="margin:4px 0 0">Arraste o notebook na planta. Valores de enlace descendente (AP → cliente).</p>
+      </div>
+
+      <div class="card box">
+        <h3>Cobertura da área interna</h3>
+        <div id="statsBody"></div>
+      </div>
+
+      <div class="card box">
+        <h3>Parâmetros</h3>
+        <div class="row"><label>Reflexões no mapa</label>
+          <select id="reflSel"><option value="nao">Desligadas (rápido)</option><option value="fortes">Materiais muito refletivos</option><option value="todas">Todas as paredes (lento)</option></select></div>
+        <div class="row"><label title="Representa mobília e pessoas">Expoente n</label><input type="range" id="nExp" min="2" max="3.5" step="0.1"><output id="nExpO"></output></div>
+        <div class="row"><label>Largura 5 GHz</label><div class="seg" id="widthSeg"><button data-x="20">20</button><button data-x="40">40</button><button data-x="80">80 MHz</button></div></div>
+        <div class="row"><label>Fluxos (MIMO)</label><div class="seg" id="ssSeg"><button data-x="1">1×1</button><button data-x="2">2×2</button></div></div>
+        <div class="row"><label>Resolução</label><select id="resSel"></select></div>
+        <div class="row"><label><input type="checkbox" id="useDFS" checked> Permitir canais DFS (52–144)</label></div>
+        <div class="row" style="gap:6px">
+          <button class="btn primary" id="autoCh">Planejar canais automaticamente</button>
+          <button class="btn" id="factoryCh">Todos no canal 6 / 36</button>
+        </div>
+        <div class="row" style="gap:6px">
+          <button class="btn" id="addNeigh">+ AP vizinho</button>
+          <button class="btn" id="addMO">+ Micro-ondas</button>
+          <button class="btn danger" id="resetEnv">Restaurar planta</button>
+        </div>
+      </div>
+
+      <div class="card box">
+        <details open><summary>Atividades sugeridas</summary><ol id="activities"></ol></details>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ================= DISPOSITIVOS ================= -->
+<section class="view" id="v-dispositivos">
+  <div class="prose" id="dispBody" style="max-width:1300px"></div>
+</section>
+
+<!-- ================= LABORATÓRIO ================= -->
+<section class="view" id="v-laboratorio">
+  <div class="lab">
+    <div class="card box">
+      <h3>Corte de uma parede — onda incidente em ângulo</h3>
+      <canvas id="labCanvas" width="900" height="470"></canvas>
+      <div class="fr" id="labFr"></div>
+      <div class="observe" id="labText"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card box">
+        <h3>Controles</h3>
+        <div class="row"><label>Material</label><select id="labMat"></select></div>
+        <div class="row"><label>Banda</label><div class="seg" id="labBand"><button data-b="b24">2,4 GHz</button><button data-b="b5">5 GHz</button></div></div>
+        <div class="row"><label>Ângulo θᵢ</label><input type="range" id="labAng" min="0" max="85" step="1" value="30"><output id="labAngO"></output></div>
+        <div class="row"><label>Espessura</label><input type="range" id="labT" min="0.005" max="0.5" step="0.005"><output id="labTO"></output></div>
+        <p class="hint">A polarização considerada é vertical (antena em pé, paredes verticais): o campo elétrico fica paralelo à superfície da parede (modo TE / "s").</p>
+      </div>
+      <div class="card box">
+        <h3>Perda de transmissão × ângulo</h3>
+        <canvas id="labChart1" width="520" height="230"></canvas>
+      </div>
+      <div class="card box">
+        <h3>Refletância × ângulo (1ª interface)</h3>
+        <canvas id="labChart2" width="520" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONCEITOS ================= -->
+<section class="view" id="v-conceitos">
+  <div class="prose" id="conceitosBody"></div>
+</section>
+</main>
+<div class="modal" id="modal"><div class="mcard"><div class="mhead"><b id="mTitle"></b><span class="sp"></span><span id="mScore" class="mono"></span><button id="mClose">Fechar ✕</button></div><div id="mBody"></div></div></div>
+<script>
+'use strict';
+/* =====================================================================
+   1. DADOS FÍSICOS
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const fmt = (v, d = 0) => (v == null || !isFinite(v)) ? '—' : v.toFixed(d).replace('.', ',').replace('-', '−');
+const log10 = Math.log10;
+const mw = p => Math.pow(10, p / 10);
+const dbm = m => 10 * Math.log10(Math.max(m, 1e-30));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// L = perda total típica (dB) em incidência normal para a espessura de referência t0.
+// eps = permissividade relativa (índice de refração n = √eps). Rfix = refletância fixa (materiais condutores).
+const MATS = {
+  drywall:  {nome:'Gesso acartonado (drywall)', cor:'#cdb48a', eps:2.9,  t0:0.10,  L:{b24:3,  b5:4}},
+  madeira:  {nome:'Madeira (porta, móvel)',      cor:'#9a6232', eps:2.0,  t0:0.04,  L:{b24:3,  b5:4}},
+  divisoria:{nome:'Divisória de baia',           cor:'#a98bd6', eps:2.2,  t0:0.05,  L:{b24:2,  b5:3}},
+  tijolo:   {nome:'Alvenaria de tijolo',         cor:'#c4583a', eps:3.8,  t0:0.15,  L:{b24:8,  b5:12}},
+  concreto: {nome:'Concreto',                    cor:'#5f6673', eps:5.3,  t0:0.20,  L:{b24:12, b5:18}},
+  vidro:    {nome:'Vidro comum',                 cor:'#56b4e0', eps:6.3,  t0:0.01,  L:{b24:2,  b5:3}},
+  lowe:     {nome:'Vidro Low-E (metalizado)',    cor:'#1f6f8b', Rfix:0.6, t0:0.01,  L:{b24:12, b5:16}},
+  espelho:  {nome:'Espelho',                     cor:'#8fa7c2', Rfix:0.9, t0:0.006, L:{b24:20, b5:25}},
+  agua:     {nome:'Água (aquário, caixa d’água)',cor:'#2563eb', eps:78,   t0:0.30,  L:{b24:20, b5:30}},
+  metal:    {nome:'Metal (geladeira, rack, porta corta-fogo)', cor:'#1f2733', Rfix:0.95, t0:0.02, L:{b24:30, b5:35}},
+};
+const BANDS = {
+  b24:{nome:'2,4 GHz', f:2437, lambda:0.1231},
+  b5: {nome:'5 GHz',   f:5500, lambda:0.0545},
+};
+for (const b in BANDS) BANDS[b].PL1 = 20 * log10(BANDS[b].f) - 27.55; // perda no espaço livre a 1 m
+
+function fresnelTE(n, cosI) {
+  const sinI2 = 1 - cosI * cosI;
+  const cosT = Math.sqrt(Math.max(0, 1 - sinI2 / (n * n)));
+  const r = (cosI - n * cosT) / (cosI + n * cosT);
+  return {R: r * r, cosT};
+}
+// Propriedades por banda
+const MP = {b24:{}, b5:{}};
+for (const b in MP) for (const k in MATS) {
+  const m = MATS[k];
+  const n = m.eps ? Math.sqrt(m.eps) : null;
+  const R0 = m.Rfix != null ? m.Rfix : ((1 - n) / (1 + n)) ** 2;
+  const Lf0 = -20 * log10(1 - R0);
+  MP[b][k] = {key:k, n, Rfix:m.Rfix, R0, absPerM: Math.max(0, m.L[b] - Lf0) / m.t0};
+}
+function interfaceAt(mp, cosI) {
+  if (mp.Rfix != null) return {R: mp.Rfix, cosT: Math.max(cosI, 0.34)};
+  return fresnelTE(mp.n, cosI);
+}
+function wallLossP(mp, t, cosI) {
+  const f = interfaceAt(mp, cosI);
+  return Math.min(mp.absPerM * t / f.cosT - 20 * log10(Math.max(1 - f.R, 1e-3)), 50);
+}
+function reflLossP(mp, cosI) {
+  return Math.min(-10 * log10(Math.max(interfaceAt(mp, cosI).R, 1e-3)), 30);
+}
+
+const CH24 = [1,2,3,4,5,6,7,8,9,10,11,12,13];
+const CH5 = [36,40,44,48,52,56,60,64,100,104,108,112,116,120,124,128,132,136,140,144,149,153,157,161,165];
+const BLK = {
+  40:[[36,40],[44,48],[52,56],[60,64],[100,104],[108,112],[116,120],[124,128],[132,136],[140,144],[149,153],[157,161]],
+  80:[[36,48],[52,64],[100,112],[116,128],[132,144],[149,161]],
+};
+const isDFS = c => c >= 52 && c <= 144;
+function block5(ch, w) {
+  if (w === 20) return [ch, ch];
+  for (const b of BLK[w]) if (ch >= b[0] && ch <= b[1]) return b;
+  return [ch, ch];
+}
+function overlapCh(band, a, b, w) {
+  if (band === 'b24') return Math.max(0, 1 - Math.abs(a - b) * 5 / 22);
+  const A = block5(a, w), B = block5(b, w);
+  return (A[0] <= B[1] && B[0] <= A[1]) ? 1 : 0;
+}
+const moFactor = ch => 0.5 * (0.4 + 0.6 * clamp((ch - 1) / 9, 0, 1)); // ciclo de trabalho 50%
+const noiseDbm = bw => -174 + 10 * log10(bw * 1e6) + 7; // NF = 7 dB
+
+const MCS = [
+  {mod:'BPSK 1/2', snr:2}, {mod:'QPSK 1/2', snr:5}, {mod:'QPSK 3/4', snr:9}, {mod:'16-QAM 1/2', snr:11},
+  {mod:'16-QAM 3/4', snr:15}, {mod:'64-QAM 2/3', snr:18}, {mod:'64-QAM 3/4', snr:20}, {mod:'64-QAM 5/6', snr:25},
+  {mod:'256-QAM 3/4', snr:29}, {mod:'256-QAM 5/6', snr:31}];
+const RATES = {
+  20:[6.5,13,19.5,26,39,52,58.5,65,78,null],
+  40:[13.5,27,40.5,54,81,108,121.5,135,162,180],
+  80:[29.3,58.5,87.8,117,175.5,234,263.3,292.5,351,390]};
+function rateFor(band, sinr, rssi, s) {
+  if (rssi < -88) return null;
+  const bw = band === 'b24' ? 20 : s.width5, maxM = band === 'b24' ? 7 : 9;
+  let m = -1;
+  for (let i = 0; i <= maxM; i++) if (sinr >= MCS[i].snr && RATES[bw][i] != null) m = i;
+  if (m < 0) return null;
+  return {mcs:m, rate: RATES[bw][m] * s.ss, bw};
+}
+const bwOf = (band, s) => band === 'b24' ? 20 : s.width5;
+const AP_COL = ['#e63946','#1d70b8','#2a9d8f','#f4a261','#8338ec','#d6336c','#3a86ff','#fb8500','#06a77d','#6d597a','#bc4749','#118ab2'];
+
+/* =====================================================================
+   2. AMBIENTES
+   ===================================================================== */
+let UID = 1;
+function W(list, x1, y1, x2, y2, mat, t, k) { list.push({id:UID++, x1, y1, x2, y2, mat, t: t ?? MATS[mat].t0, k: k ?? 1}); }
+// parede com aberturas/portas: gaps = [[de, até, material|null], ...] em metros ao longo do segmento
+function WS(list, x1, y1, x2, y2, mat, t, gaps = []) {
+  const L = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / L, uy = (y2 - y1) / L;
+  gaps = gaps.slice().sort((a, b) => a[0] - b[0]);
+  let pos = 0;
+  const P = s => [x1 + ux * s, y1 + uy * s];
+  for (const [a, b, gm] of gaps) {
+    if (a > pos) W(list, ...P(pos), ...P(a), mat, t);
+    if (gm) W(list, ...P(a), ...P(b), gm, MATS[gm].t0);
+    pos = b;
+  }
+  if (pos < L) W(list, ...P(pos), ...P(L), mat, t);
+}
+// objeto fechado (geladeira, aquário…): cada face conta 50% da perda, assim atravessá-lo inteiro = 1 objeto
+function R(list, x1, y1, x2, y2, mat, t) {
+  W(list, x1, y1, x2, y1, mat, t, .5); W(list, x2, y1, x2, y2, mat, t, .5);
+  W(list, x2, y2, x1, y2, mat, t, .5); W(list, x1, y2, x1, y1, mat, t, .5);
+}
+function mkAP(nome, x, y, o = {}) {
+  return {id:UID++, kind:'ap', nome, x, y, own: o.own ?? true,
+    ch:{b24:o.c24 ?? 6, b5:o.c5 ?? 36}, tx:{b24:o.t24 ?? 20, b5:o.t5 ?? 20},
+    on:{b24:true, b5:true}, gain:o.g ?? 2, tipo:o.tipo ?? 'roteador'};
+}
+// Configuração lógica da rede (o que se ajusta na interface web do roteador / controladora)
+function netResidencia() {
+  return {modo:'domestico', modelo:'NetLab AC1200 (roteador simulado)', fwVer:'1.0.3', fwAtual:'1.2.0', firmwareOk:false,
+    ssids:[{id:1, nome:'WIFI_7F3A21', seg:'wpa2', senha:'12345678', oculto:false, isolamento:false, vlan:1, convidados:false, portal:false}],
+    pmf:'desligado', wps:true, filtroMAC:false, wids:false, radius:'', vlanGerencia:1, bandSteering:true,
+    admin:{usuario:'admin', senha:'admin', https:false, remoto:false, upnp:true},
+    lan:{ip:'192.168.0.1', prefixo:24, dhcp:true, ini:'192.168.0.100', fim:'192.168.0.199'}};
+}
+function netCorporativo() {
+  return {modo:'corporativo', modelo:'Controladora NetLab WLC (simulada)', fwVer:'5.1.0', fwAtual:'5.4.2', firmwareOk:false,
+    ssids:[{id:1, nome:'EMPRESA', seg:'wpa2', senha:'empresa2024', oculto:false, isolamento:false, vlan:1, convidados:false, portal:false}],
+    pmf:'desligado', wps:false, filtroMAC:false, wids:false, radius:'', vlanGerencia:1, bandSteering:true,
+    admin:{usuario:'admin', senha:'admin', https:false, remoto:false, upnp:false},
+    lan:{ip:'10.10.1.1', prefixo:24, dhcp:true, ini:'10.10.1.50', fim:'10.10.1.250'}};
+}
+function buildResidencia() {
+  const w = [];
+  // Paredes externas (alvenaria 20 cm) com janelas e porta
+  WS(w, 0,0, 14,0, 'tijolo', 0.20, [[1.5,3,'vidro'],[8,9.5,'vidro'],[12,13.2,'vidro']]);
+  WS(w, 0,0, 0,10, 'tijolo', 0.20, [[6.5,8.5,'vidro']]);
+  WS(w, 0,10, 8,10, 'tijolo', 0.20, [[2,3,'madeira'],[4.5,7,'vidro']]);
+  WS(w, 14,0, 14,8, 'tijolo', 0.20, [[1,2.5,'vidro'],[5,6,'vidro']]);
+  WS(w, 8,8, 14,8, 'tijolo', 0.15, [[1,3,'vidro']]);
+  W(w, 8,8, 8,10, 'vidro');
+  // Paredes internas
+  WS(w, 0,4, 14,4, 'tijolo', 0.15, [[3.2,4.0,'madeira'],[4.7,6.3,null],[11.3,12.1,'madeira']]);
+  W(w, 4.5,0, 4.5,4, 'tijolo', 0.15);
+  WS(w, 6.5,0, 6.5,4, 'tijolo', 0.15, [[2.8,3.6,'madeira']]);
+  WS(w, 4.5,2.5, 6.5,2.5, 'tijolo', 0.15, [[0.5,1.2,'madeira']]);
+  W(w, 11,0, 11,4, 'drywall', 0.10);
+  WS(w, 8,4, 8,8, 'tijolo', 0.15, [[1.5,3,null]]);
+  WS(w, 12,4, 12,8, 'tijolo', 0.15, [[2.5,3.4,null]]);
+  // Objetos
+  R(w, 8.3,4.25, 9.0,4.95, 'metal');     // geladeira
+  R(w, 12.35,4.25, 13.05,4.95, 'metal'); // máquina de lavar
+  R(w, 1.2,4.4, 2.8,4.8, 'agua', 0.4);   // aquário (40 cm de água)
+  W(w, 4.8,0.25, 6.2,0.25, 'espelho');   // espelho do banheiro
+  W(w, 7.0,0.45, 10.6,0.45, 'espelho');  // guarda-roupa espelhado
+  R(w, 0.25,0.25, 0.85,2.6, 'madeira', 0.02); // guarda-roupa de madeira
+  // Casa vizinha
+  WS(w, -1.2,-1.2, -1.2,11.2, 'tijolo', 0.20, [[5,6.2,'vidro']]);
+  return {
+    key:'residencia', titulo:'Residência', bounds:{x0:-4.2, y0:-1.4, x1:15.4, y1:11.4},
+    inside:(x, y) => x >= 0 && x <= 14 && y >= 0 && y <= 10, insideRect:{x0:0, y0:0, x1:14, y1:10},
+    walls:w,
+    labels:[['Quarto 1',2.6,2],['Banho',5.5,1.3],['Corredor',5.5,3.3],['Suíte',8.75,2.4],['Escritório',12.5,2.6],
+      ['Sala de estar / jantar',4,5.4],['Cozinha',10,6.6],['Serviço',13,6.6],['Varanda',11,9.2],['Casa vizinha',-2.7,-0.6],
+      ['geladeira',8.65,5.3,1],['lavadora',12.7,5.3,1],['aquário',2,5.1,1],['guarda-roupa espelhado',8.8,0.8,1],['espelho',5.5,0.55,1]],
+    aps:[mkAP('Roteador', 0.7, 9.3, {c24:6, c5:36, t24:20, t5:20, g:2, tipo:'roteador'}),
+         mkAP('AP vizinho', -2.7, 3.2, {own:false, c24:6, c5:149, t24:20, t5:20, g:2})],
+    net:netResidencia(), atk:{x:14.8, y:5.3, dir:false},
+    interf:[{id:UID++, kind:'mo', nome:'Micro-ondas', x:9.7, y:4.55, on:false, eirp:3}],
+    client:{x:9.4, y:2.3},
+    settings:{band:'b24', view:'rssi', refl:'fortes', nExp:2.6, width5:80, ss:2, res:0.15, dfs:true},
+    resOpts:[0.1,0.15,0.2,0.3],
+  };
+}
+function baias(w, x, y, cols) {
+  const step = 1.8;
+  W(w, x, y, x + cols * step, y, 'divisoria');
+  for (let i = 0; i <= cols; i++) W(w, x + i * step, y - 1.3, x + i * step, y + 1.3, 'divisoria');
+}
+function buildCorporativo() {
+  const w = [];
+  // Fachada: concreto + vidro Low-E
+  WS(w, 0,0, 40,0, 'concreto', 0.25, [[1,7,'lowe'],[9,13,'lowe'],[15,19,'lowe'],[21,31,'lowe']]);
+  WS(w, 0,24, 40,24, 'concreto', 0.25, [[11,29,'lowe'],[31,39,'lowe']]);
+  WS(w, 0,0, 0,24, 'concreto', 0.25, [[8,16,'lowe']]);
+  WS(w, 40,0, 40,24, 'concreto', 0.25, [[9,17,'lowe']]);
+  // Sala de reunião de vidro
+  W(w, 8,0, 8,6, 'vidro'); W(w, 0,6, 8,6, 'vidro');
+  // Diretorias (drywall + portas de madeira)
+  W(w, 14,0, 14,6, 'drywall'); W(w, 20,0, 20,6, 'drywall');
+  WS(w, 8,6, 20,6, 'drywall', 0.10, [[4.5,5.4,'madeira'],[10.5,11.4,'madeira']]);
+  // Data center
+  W(w, 32,0, 32,7, 'concreto', 0.20);
+  WS(w, 32,7, 40,7, 'concreto', 0.20, [[1.5,2.7,'metal']]);
+  R(w, 33.5,2, 38.5,2.7, 'metal'); R(w, 33.5,4.2, 38.5,4.9, 'metal');
+  // Núcleo (elevadores, escada, banheiros)
+  W(w, 17,9, 23,9, 'concreto', 0.30);
+  WS(w, 17,15, 23,15, 'concreto', 0.30, [[3.6,4.8,'metal']]);
+  WS(w, 17,9, 17,15, 'concreto', 0.30, [[3.6,5.2,null]]);
+  WS(w, 23,9, 23,15, 'concreto', 0.30, [[4.2,5.2,'madeira']]);
+  R(w, 17.3,9.3, 19.7,12, 'metal');
+  W(w, 20,9, 20,15, 'concreto', 0.20);
+  W(w, 20,12, 23,12, 'tijolo', 0.15);
+  // Auditório
+  WS(w, 0,17, 10,17, 'tijolo', 0.15, [[7.5,8.6,'madeira']]);
+  W(w, 10,17, 10,24, 'tijolo', 0.15);
+  // Copa
+  WS(w, 30,18, 40,18, 'tijolo', 0.15, [[1,2.2,null]]);
+  W(w, 30,18, 30,24, 'tijolo', 0.15);
+  R(w, 38.6,18.4, 39.6,19.2, 'metal');
+  // Baias do open space
+  baias(w, 1.5, 9.5, 4); baias(w, 1.5, 13.5, 4); baias(w, 10, 10, 3); baias(w, 10, 14, 3);
+  baias(w, 24.5, 10.5, 4); baias(w, 24.5, 14.5, 4); baias(w, 33, 11, 3); baias(w, 33, 15, 3);
+  baias(w, 21.5, 3, 5); baias(w, 12, 20.5, 4); baias(w, 21, 20.5, 4);
+  const ap = (n, x, y) => mkAP(n, x, y, {c24:6, c5:36, t24:17, t5:20, g:4, tipo:'ap'});
+  return {
+    key:'corporativo', titulo:'Escritório', bounds:{x0:-2, y0:-1.6, x1:42, y1:25.6},
+    inside:(x, y) => x >= 0 && x <= 40 && y >= 0 && y <= 24, insideRect:{x0:0, y0:0, x1:40, y1:24},
+    walls:w,
+    labels:[['Reunião (vidro)',4,1.4],['Diretoria 1',11,1.4],['Diretoria 2',17,1.4],['Open space',26,0.9],['Data center',36,1.2],
+      ['Núcleo',20,16.4,1],['elevadores',18.5,12.6,1],['escada',21.5,13.8,1],['banheiros',21.5,10.5,1],['Auditório',5,23],['Copa',35,23],
+      ['Open space',8,7.2],['Open space',30,7.9],['Open space',20,17.5],['racks',36,3.6,1],['fachada Low-E',20,-0.7,1]],
+    aps:[ap('AP1',4.5,3), ap('AP2',14,3), ap('AP3',26,3), ap('AP4',36,11), ap('AP5',7,12), ap('AP6',29,13),
+         ap('AP7',5,20.5), ap('AP8',20,20.5), ap('AP9',35,21),
+         Object.assign(mkAP('AP não autorizado', 31.6, 16.4, {own:false, c24:6, c5:149, t24:20, t5:20, g:2}), {rogue:true, ssidR:'EMPRESA', segR:'aberta'})],
+    net:netCorporativo(), atk:{x:41.3, y:12.5, dir:false},
+    interf:[{id:UID++, kind:'mo', nome:'Micro-ondas', x:36.5, y:18.6, on:false, eirp:3}],
+    client:{x:26.5, y:16.5},
+    settings:{band:'b5', view:'rssi', refl:'nao', nExp:2.8, width5:40, ss:2, res:0.35, dfs:true},
+    resOpts:[0.25,0.35,0.5,0.7],
+  };
+}
+const BUILDERS = {residencia:buildResidencia, corporativo:buildCorporativo};
+const ENVS = {residencia:buildResidencia(), corporativo:buildCorporativo()};
+let env = ENVS.residencia;
+
+const ACTIVITIES = {
+  residencia:[
+    'Com o roteador no canto da sala (onde o técnico costuma instalar), anote a cobertura ≥ −67 dBm em 2,4 GHz e em 5 GHz. Depois arraste-o para um ponto central (ex.: corredor) e compare.',
+    'Leve o notebook até a suíte e leia o orçamento de enlace: quais paredes o sinal atravessa e quanto cada uma custa em cada banda?',
+    'Na vista <b>Raios</b>, selecione o roteador e observe a reflexão no guarda-roupa espelhado, na geladeira e na lavadora (metal). Compare o aquário (água) com o drywall.',
+    'Ligue o micro-ondas (clique nele) e veja a <b>SINR</b> e a <b>Taxa</b> em 2,4 GHz. Repita em 5 GHz.',
+    'O AP do vizinho usa o canal 6 em 2,4 GHz, o mesmo do seu roteador. Troque para 1 ou 11 e observe a SINR perto da parede vizinha.',
+    'Adicione um segundo AP (mesh) para cobrir o escritório e a varanda. Use a vista <b>Melhor AP</b> para ver as células.',
+    'Pinte uma parede interna como concreto ou como drywall e meça o efeito em 5 GHz.',
+    '<b>Ampliar a cobertura:</b> com <b>+ AP</b>, instale um <i>Repetidor</i> no corredor e leve o notebook ao escritório. Anote a taxa efetiva e o backhaul. Troque o tipo para <i>Mesh</i> e depois para <i>AP</i> (cabeado) e compare.',
+    '<b>Segurança:</b> abra <b>Configurar a rede</b>. O roteador está como veio de fábrica (senha 12345678, WPS ligado, admin/admin, firmware antigo). Corrija até a nota de segurança passar de 90.',
+    '<b>LAN/DHCP:</b> mude o IP do roteador para 192.168.1.1 sem mudar a faixa DHCP. Que erro aparece? Corrija.',
+    '<b>Exposição:</b> na vista <b>Exposição</b>, veja o que o atacante na rua consegue fazer. Ative a antena direcional. Reduza a potência ou reposicione o roteador para diminuir o vazamento.'],
+  corporativo:[
+    '"Padrão de fábrica": todos os APs estão no canal 6 (2,4 GHz) e 36 (5 GHz). Veja <b>SINR</b> e <b>Co-canal</b>: o sinal é forte, mas a rede é ruim. Por quê?',
+    'Clique em <b>Planejar canais automaticamente</b> e compare SINR, taxa e co-canal nas duas bandas.',
+    'Em 2,4 GHz só existem 3 canais sem sobreposição (1, 6, 11). Desligue o rádio 2,4 GHz em alguns APs ou reduza a potência e observe a melhora.',
+    'Compare 20, 40 e 80 MHz em 5 GHz: a taxa máxima aumenta, mas sobram menos canais para reuso. Desmarque DFS e replaneje.',
+    'Observe o data center (concreto + racks) e o núcleo com elevadores (metal) na vista <b>Raios</b>.',
+    'Pinte a fachada com vidro comum no lugar do Low-E e veja quanto sinal "vaza" para fora do prédio.',
+    'Ligue o micro-ondas da copa e posicione o notebook ao lado: compare 2,4 e 5 GHz.',
+    '<b>Segurança corporativa:</b> em <b>Configurar a rede</b> (controladora), troque a senha compartilhada por WPA2/WPA3-Enterprise com RADIUS, crie o SSID de visitantes isolado em outra VLAN e separe a VLAN de gerência.',
+    '<b>AP pirata:</b> há um AP não autorizado no open space. Ative o WIDS em <b>Segurança do ar</b>, veja qual AP o detecta e remova-o.',
+    '<b>Ataques:</b> em <b>Auditoria e ataques</b>, compare o que o atacante consegue fazer antes e depois de ativar o PMF e o 802.1X.'],
+};
+
+/* =====================================================================
+   3. GEOMETRIA E PROPAGAÇÃO
+   ===================================================================== */
+const geoCache = new Map();
+let geoVersion = 0;
+function getGeo(e, band) {
+  const key = e.key + band + geoVersion;
+  if (geoCache.has(key)) return geoCache.get(key);
+  const ws = e.walls, N = ws.length;
+  const G = {N, x1:new Float64Array(N), y1:new Float64Array(N), x2:new Float64Array(N), y2:new Float64Array(N),
+    minx:new Float64Array(N), maxx:new Float64Array(N), miny:new Float64Array(N), maxy:new Float64Array(N),
+    nx:new Float64Array(N), ny:new Float64Array(N), t:new Float64Array(N), k:new Float64Array(N), mp:[], strong:[], all:[]};
+  ws.forEach((w, i) => {
+    G.x1[i] = w.x1; G.y1[i] = w.y1; G.x2[i] = w.x2; G.y2[i] = w.y2;
+    G.minx[i] = Math.min(w.x1, w.x2); G.maxx[i] = Math.max(w.x1, w.x2);
+    G.miny[i] = Math.min(w.y1, w.y2); G.maxy[i] = Math.max(w.y1, w.y2);
+    const L = Math.hypot(w.x2 - w.x1, w.y2 - w.y1) || 1;
+    G.nx[i] = -(w.y2 - w.y1) / L; G.ny[i] = (w.x2 - w.x1) / L;
+    G.t[i] = w.t; G.k[i] = w.k ?? 1; G.mp[i] = MP[band][w.mat];
+    G.all.push(i); if (G.mp[i].R0 >= 0.3) G.strong.push(i);
+  });
+  if (geoCache.size > 8) geoCache.clear();
+  geoCache.set(key, G);
+  return G;
+}
+function invalidateGeo() { geoVersion++; geoCache.clear(); }
+// Objetos pequenos (k < 1): a onda contorna o objeto por difração, então a "sombra" é limitada.
+const OBJ_FACE_CAP = 7;
+function faceLoss(G, i, cosI) {
+  const l = wallLossP(G.mp[i], G.t[i], cosI);
+  return G.k[i] < 1 ? Math.min(G.k[i] * l, OBJ_FACE_CAP) : l;
+}
+
+function crossLoss(G, ax, ay, bx, by, skip, list) {
+  const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1e-9;
+  const mnx = Math.min(ax, bx), mxx = Math.max(ax, bx), mny = Math.min(ay, by), mxy = Math.max(ay, by);
+  let L = 0;
+  for (let i = 0; i < G.N; i++) {
+    if (i === skip) continue;
+    if (G.maxx[i] < mnx || G.minx[i] > mxx || G.maxy[i] < mny || G.miny[i] > mxy) continue;
+    const ex = G.x2[i] - G.x1[i], ey = G.y2[i] - G.y1[i];
+    const den = dx * ey - dy * ex;
+    if (den === 0) continue;
+    const qx = G.x1[i] - ax, qy = G.y1[i] - ay;
+    const t = (qx * ey - qy * ex) / den;
+    if (t <= 1e-6 || t >= 1 - 1e-6) continue;
+    const u = (qx * dy - qy * dx) / den;
+    if (u < 0 || u >= 1) continue; // semiaberto: junção entre segmentos conta uma vez só
+    const cosI = Math.abs(dx * G.nx[i] + dy * G.ny[i]) / len;
+    const l = faceLoss(G, i, cosI);
+    L += l;
+    if (list) list.push({i, l, ang: Math.acos(Math.min(1, cosI)) * 180 / Math.PI});
+  }
+  return L;
+}
+const PLd = (band, d, n) => BANDS[band].PL1 + 10 * n * log10(Math.max(d, 0.3));
+
+// ---------- Tipos de dispositivo e topologia (repetidor / mesh) ----------
+const TIPOS = {
+  roteador: {nome:'Roteador doméstico', curto:'Roteador', desc:'Gateway da rede: roteamento, NAT, DHCP e Wi-Fi no mesmo aparelho.'},
+  ap:       {nome:'Ponto de acesso (AP) cabeado', curto:'AP', desc:'Só cria a rede sem fio; recebe a rede pelo cabo (geralmente com PoE).'},
+  repetidor:{nome:'Repetidor / extensor', curto:'Repetidor', desc:'Recebe o sinal sem fio e retransmite no MESMO rádio e canal: o tempo de antena é dividido entre receber e repetir.'},
+  mesh:     {nome:'Nó mesh (backhaul dedicado)', curto:'Mesh', desc:'Usa um rádio de 5 GHz exclusivo para falar com o nó principal (backhaul) e os outros rádios para os clientes.'},
+};
+const isRoot = a => a.tipo === 'roteador' || a.tipo === 'ap';
+function resolveTopology(e) {
+  const s = e.settings;
+  for (const a of e.aps) {
+    a._up = null;
+    if (!a.own || isRoot(a)) continue;
+    a._up = {};
+    for (const band of ['b24', 'b5']) {
+      const bb = a.tipo === 'mesh' ? 'b5' : band;
+      const G = getGeo(e, bb);
+      let best = null;
+      for (const r of e.aps) {
+        if (r === a || !r.own || !isRoot(r) || !r.on[bb]) continue;
+        const p = rx(G, {x:r.x, y:r.y, eirp:r.tx[bb] + r.gain}, a.x, a.y, bb, s.nExp, 'nao') + a.gain;
+        if (!best || p > best.rssi) best = {ap:r, rssi:p};
+      }
+      if (best) {
+        const r = rateFor(bb, best.rssi - noiseDbm(bwOf(bb, s)), best.rssi, s);
+        best.rate = r ? r.rate : 0; best.band = bb;
+      }
+      a._up[band] = best;
+    }
+  }
+}
+// Taxa efetiva para quem está conectado a um repetidor ou nó mesh
+function effRate(src, band, r) {
+  if (!r || !src || !src._up) return r;
+  const up = src._up[band];
+  if (!up || !up.rate) return {...r, rate:0, phy:r.rate, bh:0, semUplink:true};
+  const eff = src.tipo === 'repetidor' ? 1 / (1 / r.rate + 1 / up.rate) : Math.min(r.rate, up.rate);
+  return {...r, rate:eff, phy:r.rate, bh:up.rate};
+}
+function chOf(a, band) {
+  if (a.tipo === 'repetidor' && a._up && a._up[band] && a._up[band].ap) return a._up[band].ap.ch[band];
+  return a.ch[band];
+}
+function emitters(e, band) {
+  resolveTopology(e);
+  const out = [];
+  e.aps.forEach((a, idx) => { if (a.on[band]) out.push({src:a, kind:'ap', own:a.own, x:a.x, y:a.y, eirp:a.tx[band] + a.gain, ch:chOf(a, band), col:AP_COL[idx % AP_COL.length]}); });
+  if (band === 'b24') e.interf.forEach(m => { if (m.on) out.push({src:m, kind:'mo', own:false, x:m.x, y:m.y, eirp:m.eirp}); });
+  return out;
+}
+// Potência recebida (dBm) de um emissor em (x,y): caminho direto + reflexões de 1ª ordem (soma de potências)
+function rx(G, em, x, y, band, n, refl, info) {
+  const d = Math.hypot(x - em.x, y - em.y);
+  const PL = PLd(band, d, n);
+  const wl = info ? [] : null;
+  const Lw = crossLoss(G, em.x, em.y, x, y, -1, wl);
+  const Pd = em.eirp - PL - Lw;
+  if (info) { info.d = d; info.PL = PL; info.walls = wl; info.Pd = Pd; info.refl = 0; }
+  if (refl === 'nao') return Pd;
+  let sum = mw(Pd), Pbest = Pd;
+  const set = refl === 'todas' ? G.all : G.strong;
+  for (let k = 0; k < set.length; k++) {
+    const j = set[k];
+    const sa = (em.x - G.x1[j]) * G.nx[j] + (em.y - G.y1[j]) * G.ny[j];
+    const sb = (x - G.x1[j]) * G.nx[j] + (y - G.y1[j]) * G.ny[j];
+    if (sa * sb <= 0) continue;
+    const ix = em.x - 2 * sa * G.nx[j], iy = em.y - 2 * sa * G.ny[j];
+    const ddx = x - ix, ddy = y - iy, dist = Math.hypot(ddx, ddy);
+    const kk = Math.abs(sa) / (Math.abs(sa) + Math.abs(sb));
+    const px = ix + ddx * kk, py = iy + ddy * kk;
+    const ex = G.x2[j] - G.x1[j], ey = G.y2[j] - G.y1[j];
+    const u = ((px - G.x1[j]) * ex + (py - G.y1[j]) * ey) / (ex * ex + ey * ey);
+    if (u < 0 || u > 1) continue;
+    const cosI = Math.abs(ddx * G.nx[j] + ddy * G.ny[j]) / dist;
+    const P0 = em.eirp - PLd(band, dist, n) - reflLossP(G.mp[j], cosI);
+    if (P0 < Pbest - 25) continue; // contribuição desprezível
+    const Pr = P0 - crossLoss(G, em.x, em.y, px, py, j) - crossLoss(G, px, py, x, y, j);
+    sum += mw(Pr);
+    if (Pr > Pbest) Pbest = Pr;
+  }
+  const P = dbm(sum);
+  if (info) info.refl = P - Pd;
+  return P;
+}
+// Métricas de um ponto a partir das potências de cada emissor
+function metrics(ems, P, band, s) {
+  let sIdx = -1, sP = -300;
+  for (let k = 0; k < ems.length; k++) if (ems[k].own && P[k] > sP) { sP = P[k]; sIdx = k; }
+  if (sIdx < 0) return {s:-1, rssi:-300, sinr:-99, co:0, rate:null};
+  const bw = bwOf(band, s);
+  let I = mw(noiseDbm(bw)), co = 0;
+  const se = ems[sIdx];
+  for (let k = 0; k < ems.length; k++) {
+    const e = ems[k];
+    let f;
+    if (k === sIdx) f = 1;
+    else if (e.kind === 'mo') f = moFactor(se.ch);
+    else f = overlapCh(band, se.ch, e.ch, s.width5);
+    if (e.kind === 'ap' && f >= 0.5 && P[k] >= -82) co++;
+    if (k !== sIdx && f > 0) I += f * mw(P[k]);
+  }
+  const sinr = sP - dbm(I);
+  return {s:sIdx, rssi:sP, sinr, co, rate:effRate(se.src, band, rateFor(band, sinr, sP, s))};
+}
+function evalPoint(e, band, x, y, withInfo) {
+  const s = e.settings, G = getGeo(e, band), ems = emitters(e, band);
+  const infos = [];
+  const P = ems.map(em => { const inf = withInfo ? {} : null; const p = rx(G, em, x, y, band, s.nExp, s.refl, inf); infos.push(inf); return p; });
+  return {ems, P, infos, ...metrics(ems, P, band, s)};
+}
+
+/* ---------- Campo (mapa de calor) ---------- */
+function computeField(e, band, res, refl) {
+  const s = e.settings, b = e.bounds, G = getGeo(e, band), ems = emitters(e, band);
+  const nx = Math.ceil((b.x1 - b.x0) / res), ny = Math.ceil((b.y1 - b.y0) / res), n = nx * ny;
+  const data = ems.map(() => new Float32Array(n));
+  for (let k = 0; k < ems.length; k++) {
+    const em = ems[k], arr = data[k];
+    for (let j = 0; j < ny; j++) {
+      const y = b.y0 + (j + 0.5) * res;
+      for (let i = 0; i < nx; i++) arr[j * nx + i] = rx(G, em, b.x0 + (i + 0.5) * res, y, band, s.nExp, refl);
+    }
+  }
+  const F = {nx, ny, res, band, ems, data,
+    best:new Int16Array(n), rssi:new Float32Array(n), sinr:new Float32Array(n), co:new Uint8Array(n), rate:new Float32Array(n), mcs:new Int8Array(n)};
+  const P = new Array(ems.length);
+  for (let c = 0; c < n; c++) {
+    for (let k = 0; k < ems.length; k++) P[k] = data[k][c];
+    const m = metrics(ems, P, band, s);
+    F.best[c] = m.s; F.rssi[c] = m.rssi; F.sinr[c] = m.sinr; F.co[c] = m.co;
+    F.rate[c] = m.rate ? m.rate.rate : 0; F.mcs[c] = m.rate && m.rate.rate > 0 ? m.rate.mcs : -1;
+  }
+  // estatísticas da área interna
+  let tot = 0, c67 = 0, c75 = 0, s20 = 0, rsum = 0, co1 = 0;
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    if (!e.inside(b.x0 + (i + 0.5) * res, b.y0 + (j + 0.5) * res)) continue;
+    const c = j * nx + i; tot++;
+    if (F.rssi[c] >= -67) c67++; if (F.rssi[c] >= -75) c75++;
+    if (F.sinr[c] >= 20) s20++; rsum += F.rate[c]; if (F.co[c] <= 1 && F.rssi[c] >= -82) co1++;
+  }
+  F.stats = {c67:c67 / tot, c75:c75 / tot, s20:s20 / tot, rate:rsum / tot, co1:co1 / tot};
+  return F;
+}
+
+/* ---------- Traçado de raios ---------- */
+function traceRays(e, band, ap, N, maxI, showR, showT) {
+  const G = getGeo(e, band), s = e.settings, b = e.bounds;
+  const segs = [], pts = [];
+  const eirp = ap.tx[band] + ap.gain;
+  const pw = (d, loss) => eirp - PLd(band, d, s.nExp) - loss;
+  function nearest(x, y, dx, dy, skip) {
+    let best = Infinity, bi = -1;
+    for (let i = 0; i < G.N; i++) {
+      if (i === skip) continue;
+      const ex = G.x2[i] - G.x1[i], ey = G.y2[i] - G.y1[i];
+      const den = dx * ey - dy * ex;
+      if (Math.abs(den) < 1e-12) continue;
+      const qx = G.x1[i] - x, qy = G.y1[i] - y;
+      const t = (qx * ey - qy * ex) / den;
+      if (t <= 1e-5 || t >= best) continue;
+      const u = (qx * dy - qy * dx) / den;
+      if (u < 0 || u > 1) continue;
+      best = t; bi = i;
+    }
+    return {t:best, i:bi};
+  }
+  function toBounds(x, y, dx, dy) {
+    let t = Infinity;
+    if (dx > 0) t = Math.min(t, (b.x1 - x) / dx); if (dx < 0) t = Math.min(t, (b.x0 - x) / dx);
+    if (dy > 0) t = Math.min(t, (b.y1 - y) / dy); if (dy < 0) t = Math.min(t, (b.y0 - y) / dy);
+    return Math.max(t, 0);
+  }
+  let budget = 30000;
+  function trace(x, y, dx, dy, dist, loss, depth, skip) {
+    if (--budget < 0) return;
+    const h = nearest(x, y, dx, dy, skip);
+    const tb = toBounds(x, y, dx, dy);
+    const hit = h.i >= 0 && h.t < tb;
+    const t = hit ? h.t : tb;
+    const x2 = x + dx * t, y2 = y + dy * t, d2 = dist + t;
+    segs.push({x1:x, y1:y, x2, y2, d1:dist, d2, p1:pw(dist, loss), p2:pw(d2, loss), g:depth});
+    if (!hit || depth >= maxI) return;
+    const pHit = pw(d2, loss);
+    if (pHit < -95) return;
+    const i = h.i, nx = G.nx[i], ny = G.ny[i], dot = dx * nx + dy * ny, cosI = Math.abs(dot), mp = G.mp[i];
+    if (showR) {
+      const Lr = reflLossP(mp, cosI);
+      if (pHit - Lr > -95) {
+        pts.push({x:x2, y:y2, k:'R', d:d2});
+        trace(x2, y2, dx - 2 * dot * nx, dy - 2 * dot * ny, d2, loss + Lr, depth + 1, i);
+      }
+    }
+    if (showT) {
+      const Lt = faceLoss(G, i, cosI);
+      if (pHit - Lt > -95) {
+        // refração dentro da parede (lei de Snell), saída paralela à direção original
+        const f = interfaceAt(mp, cosI);
+        const sg = Math.sign(dot) || 1;
+        const tx = dx - dot * nx, ty = dy - dot * ny, tl = Math.hypot(tx, ty) || 1;
+        const sinT = Math.sqrt(Math.max(0, 1 - f.cosT * f.cosT));
+        const ix = sg * nx * f.cosT + (tx / tl) * sinT, iy = sg * ny * f.cosT + (ty / tl) * sinT;
+        const L = G.t[i] / f.cosT;
+        const ex = x2 + ix * L * 0.5, ey = y2 + iy * L * 0.5; // metade da espessura a partir do eixo da parede
+        segs.push({x1:x2, y1:y2, x2:ex, y2:ey, d1:d2, d2:d2 + L * 0.5, p1:pHit, p2:pHit - Lt, g:depth, inside:true});
+        pts.push({x:x2, y:y2, k:'T', d:d2});
+        trace(ex, ey, dx, dy, d2 + L * 0.5, loss + Lt, depth + 1, i);
+      }
+    }
+  }
+  for (let r = 0; r < N; r++) {
+    const a = (r + 0.5) / N * Math.PI * 2;
+    trace(ap.x, ap.y, Math.cos(a), Math.sin(a), 0.3, 0, 0, -1);
+  }
+  let maxD = 0; segs.forEach(sg => { if (sg.d2 > maxD) maxD = sg.d2; });
+  return {segs, pts, maxD};
+}
+
+/* =====================================================================
+   4. ESCALAS DE COR
+   ===================================================================== */
+function hex2rgb(h) { return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)]; }
+function makeScale(stops) {
+  const st = stops.map(([v, h, a]) => [v, ...hex2rgb(h), a]);
+  const f = v => {
+    if (v <= st[0][0]) return st[0].slice(1);
+    for (let i = 1; i < st.length; i++) if (v <= st[i][0]) {
+      const A = st[i - 1], B = st[i], t = (v - A[0]) / (B[0] - A[0]);
+      return [A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t, A[3] + (B[3] - A[3]) * t, A[4] + (B[4] - A[4]) * t];
+    }
+    return st[st.length - 1].slice(1);
+  };
+  f.stops = st; return f;
+}
+const SC_RSSI = makeScale([[-100,'#3b1426',.62],[-88,'#6b1d3a',.6],[-80,'#d7443a',.68],[-72,'#f39237',.72],[-67,'#f4d35e',.74],[-60,'#9bd14b',.75],[-50,'#2bb07f',.78],[-35,'#0b6e4f',.84]]);
+const SC_SINR = makeScale([[-5,'#6b1d3a',.62],[5,'#d7443a',.7],[12,'#f39237',.72],[20,'#f4d35e',.74],[25,'#9bd14b',.75],[35,'#2bb07f',.78],[45,'#0b6e4f',.84]]);
+const SC_RATE = makeScale([[0,'#2a2550',.55],[.15,'#3b5ba5',.7],[.4,'#2a9d8f',.74],[.7,'#8bc34a',.76],[1,'#f4d35e',.8]]);
+const CO_COL = [[0,0,0,0], hex2rgb('#2bb07f').concat(.72), hex2rgb('#f4d35e').concat(.75), hex2rgb('#f39237').concat(.75), hex2rgb('#d7443a').concat(.75)];
+
+/* =====================================================================
+   5. RENDERIZAÇÃO DA PLANTA
+   ===================================================================== */
+const cv = $('#plan'), ctx = cv.getContext('2d');
+let VS = {S:30, ox:0, oy:0, w:0, h:0, dpr:1};
+let field = null, fieldKey = '', rays = null, rayKey = '';
+let ui = {tool:'mover', mat:'tijolo', sel:null, drag:null, draft:null, hover:null, dragging:false};
+let anim = {on:false, D:0, last:0};
+const off = document.createElement('canvas'), offc = off.getContext('2d');
+
+function layout() {
+  const b = env.bounds, bw = b.x1 - b.x0, bh = b.y1 - b.y0;
+  const W0 = $('#stage').clientWidth;
+  const Hmax = Math.max(360, window.innerHeight - 190);
+  const S = Math.min(W0 / bw, Hmax / bh);
+  const w = Math.round(bw * S), h = Math.round(bh * S), dpr = window.devicePixelRatio || 1;
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  VS = {S, w, h, dpr};
+  requestDraw();
+}
+const wx = x => (x - env.bounds.x0) * VS.S;
+const wy = y => (y - env.bounds.y0) * VS.S;
+const sxw = px => px / VS.S + env.bounds.x0;
+const syw = py => py / VS.S + env.bounds.y0;
+
+function currentRes() { return ui.dragging ? Math.max(env.settings.res * 2, 0.45) : env.settings.res; }
+function currentRefl() { return ui.dragging ? 'nao' : env.settings.refl; }
+function stateKey() {
+  const s = env.settings;
+  return JSON.stringify([env.key, s.band, s.nExp, s.width5, s.ss, currentRes(), currentRefl(), geoVersion,
+    env.aps.map(a => [a.x, a.y, a.own, a.ch, a.tx, a.on, a.gain, a.tipo]), env.interf.map(m => [m.x, m.y, m.on])]);
+}
+let pendingTimer = null;
+function ensureField() {
+  const key = stateKey();
+  if (key === fieldKey && field) return;
+  const heavy = !ui.dragging && (env.settings.refl !== 'nao');
+  if (heavy) {
+    $('#busy').style.display = 'block';
+    clearTimeout(pendingTimer);
+    pendingTimer = setTimeout(() => {
+      field = computeField(env, env.settings.band, currentRes(), currentRefl());
+      fieldKey = stateKey(); $('#busy').style.display = 'none'; draw(); updatePanels();
+    }, 20);
+    if (!field || field.band !== env.settings.band) { field = computeField(env, env.settings.band, Math.max(env.settings.res * 2, 0.45), 'nao'); }
+    return;
+  }
+  field = computeField(env, env.settings.band, currentRes(), currentRefl());
+  fieldKey = key;
+}
+function ensureRays() {
+  const s = env.settings;
+  const ap = selectedAP() || env.aps.find(a => a.own) || env.aps[0];
+  if (!ap) { rays = null; return; }
+  const key = JSON.stringify([stateKey(), ap.id, $('#rayN').value, $('#rayD').value, $('#rayR').checked, $('#rayT').checked]);
+  if (key === rayKey) return;
+  rays = traceRays(env, s.band, ap, +$('#rayN').value, +$('#rayD').value, $('#rayR').checked, $('#rayT').checked);
+  rays.ap = ap; rayKey = key;
+}
+function selectedAP() { return ui.sel && ui.sel.type === 'ap' ? env.aps.find(a => a.id === ui.sel.id) : null; }
+
+let drawQueued = false;
+function requestDraw() { if (!drawQueued) { drawQueued = true; requestAnimationFrame(() => { drawQueued = false; draw(); }); } }
+
+function drawHeat(alphaMul = 1) {
+  const F = field; if (!F) return;
+  const s = env.settings, v = s.view;
+  if (off.width !== F.nx || off.height !== F.ny) { off.width = F.nx; off.height = F.ny; }
+  const img = offc.createImageData(F.nx, F.ny), d = img.data;
+  const maxRate = (s.band === 'b24' ? 65 : RATES[s.width5][9] || RATES[s.width5][8]) * s.ss;
+  const ems = F.ems, gAtk = env.atk && env.atk.dir ? 15 : 0;
+  for (let c = 0; c < F.nx * F.ny; c++) {
+    let col;
+    if (v === 'rssi' || v === 'raios') col = SC_RSSI(F.rssi[c]);
+    else if (v === 'sinr') col = F.best[c] < 0 || F.rssi[c] < -92 ? [0,0,0,0] : SC_SINR(F.sinr[c]);
+    else if (v === 'rate') col = F.rssi[c] < -92 ? [0,0,0,0] : (F.rate[c] > 0 ? SC_RATE(F.rate[c] / maxRate) : [90,90,90,.35]);
+    else if (v === 'best') {
+      if (F.best[c] < 0 || F.rssi[c] < -88) col = [0,0,0,0];
+      else { const rgb = hex2rgb(ems[F.best[c]].col); col = [...rgb, clamp((F.rssi[c] + 90) / 40, .12, 1) * .78]; }
+    }
+    else if (v === 'cocanal') col = F.rssi[c] < -82 ? [0,0,0,0] : CO_COL[Math.min(4, F.co[c])];
+    else if (v === 'expo') {
+      const xi = c % F.nx, yj = (c / F.nx) | 0;
+      if (env.inside(env.bounds.x0 + (xi + .5) * F.res, env.bounds.y0 + (yj + .5) * F.res)) col = [120,130,140,.10];
+      else { const P = F.rssi[c] + gAtk; col = P >= -70 ? [215,68,58,.78] : P >= -80 ? [243,146,55,.72] : P >= -90 ? [244,211,94,.62] : [0,0,0,0]; }
+    }
+    const o = c * 4; d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = col[3] * 255 * alphaMul;
+  }
+  offc.putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(off, 0, 0, F.nx * F.res * VS.S, F.ny * F.res * VS.S);
+}
+function draw() {
+  const s = env.settings;
+  ctx.setTransform(VS.dpr, 0, 0, VS.dpr, 0, 0);
+  ctx.clearRect(0, 0, VS.w, VS.h);
+  ctx.fillStyle = '#fbfaf7'; ctx.fillRect(0, 0, VS.w, VS.h);
+  // grade de 1 m
+  ctx.strokeStyle = '#00000010'; ctx.lineWidth = 1;
+  const b = env.bounds;
+  for (let x = Math.ceil(b.x0); x <= b.x1; x++) { ctx.beginPath(); ctx.moveTo(wx(x) + .5, 0); ctx.lineTo(wx(x) + .5, VS.h); ctx.stroke(); }
+  for (let y = Math.ceil(b.y0); y <= b.y1; y++) { ctx.beginPath(); ctx.moveTo(0, wy(y) + .5); ctx.lineTo(VS.w, wy(y) + .5); ctx.stroke(); }
+  // contorno interno
+  ensureField();
+  if (s.view === 'raios') { drawHeat(0.28); ensureRays(); drawRays(); }
+  else drawHeat(1);
+  // paredes
+  ctx.lineCap = 'butt';
+  env.walls.forEach(w => {
+    const sel = ui.sel && ui.sel.type === 'wall' && ui.sel.id === w.id;
+    ctx.strokeStyle = MATS[w.mat].cor;
+    ctx.lineWidth = Math.max(2.2, w.t * VS.S);
+    if (sel) { ctx.save(); ctx.strokeStyle = '#ffcc00'; ctx.lineWidth += 6; line(w); ctx.restore(); }
+    line(w);
+  });
+  // rótulos
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  env.labels.forEach(([t, x, y, small]) => {
+    ctx.font = small ? `italic ${Math.max(10, VS.S * .28)}px 'IBM Plex Sans', system-ui, sans-serif` : `600 ${Math.max(11, Math.min(15, VS.S * .42))}px 'IBM Plex Sans', system-ui, sans-serif`;
+    ctx.fillStyle = small ? '#3d4650cc' : '#1d232bcc';
+    ctx.fillText(t, wx(x), wy(y));
+  });
+  // escala
+  ctx.fillStyle = '#1d232b'; ctx.fillRect(10, VS.h - 16, VS.S * 2, 3);
+  ctx.font = '11px "IBM Plex Sans", system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.fillText('2 m', 14 + VS.S * 2, VS.h - 14);
+  // ligação cliente
+  const cl = env.client;
+  const ev = clientEval;
+  if (ev && ev.s >= 0) {
+    const ap = ev.ems[ev.s];
+    ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#14202b'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(wx(ap.x), wy(ap.y)); ctx.lineTo(wx(cl.x), wy(cl.y)); ctx.stroke(); ctx.restore();
+    // marcar paredes atravessadas
+    const inf = ev.infos[ev.s];
+    if (inf) inf.walls.forEach(wl => {
+      const w = env.walls[wl.i]; const p = segInter(ap.x, ap.y, cl.x, cl.y, w);
+      if (p) { ctx.fillStyle = '#14202b'; ctx.beginPath(); ctx.arc(wx(p[0]), wy(p[1]), 3.5, 0, 7); ctx.fill(); }
+    });
+  }
+  // interferentes
+  env.interf.forEach(m => {
+    const X = wx(m.x), Y = wy(m.y), sel = ui.sel && ui.sel.id === m.id;
+    ctx.fillStyle = m.on ? '#d7443a' : '#9aa3ad'; ctx.strokeStyle = sel ? '#ffcc00' : '#fff'; ctx.lineWidth = sel ? 3 : 1.5;
+    roundRect(X - 13, Y - 9, 26, 18, 4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = '600 9.5px "IBM Plex Sans", system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('MO', X, Y + .5);
+    if (m.on && s.band === 'b24') { ctx.strokeStyle = '#d7443a88'; ctx.lineWidth = 1.5; for (let r = 1; r <= 3; r++) { ctx.beginPath(); ctx.arc(X, Y, 10 + r * 7, -0.8, 0.8); ctx.stroke(); } }
+  });
+  // enlaces de backhaul (repetidor / mesh → AP principal)
+  env.aps.forEach(a => {
+    if (!a.own || !a._up) return;
+    const up = a._up[s.band];
+    ctx.save(); ctx.setLineDash(a.tipo === 'mesh' ? [2, 4] : [8, 5]); ctx.lineWidth = 2.6;
+    if (!up || !up.rate) {
+      ctx.strokeStyle = '#d7443a'; ctx.font = '600 11px "IBM Plex Sans", system-ui, sans-serif'; ctx.fillStyle = '#a11d1d'; ctx.textAlign = 'center';
+      ctx.fillText('sem conexão com o AP principal', wx(a.x), wy(a.y) - 18); ctx.restore(); return;
+    }
+    ctx.strokeStyle = up.rate >= 100 ? '#2a9d8f' : up.rate >= 30 ? '#f39237' : '#d7443a';
+    ctx.beginPath(); ctx.moveTo(wx(up.ap.x), wy(up.ap.y)); ctx.lineTo(wx(a.x), wy(a.y)); ctx.stroke();
+    const mx = wx((up.ap.x + a.x) / 2), my = wy((up.ap.y + a.y) / 2);
+    const t = `backhaul ${a.tipo === 'mesh' ? '5 GHz ' : ''}${fmt(up.rate)} Mbps`;
+    ctx.setLineDash([]); ctx.font = '600 10.5px "IBM Plex Sans", system-ui, sans-serif'; const tw = ctx.measureText(t).width;
+    ctx.fillStyle = '#ffffffee'; roundRect(mx - tw / 2 - 4, my - 9, tw + 8, 16, 4); ctx.fill();
+    ctx.fillStyle = '#14202b'; ctx.textAlign = 'center'; ctx.fillText(t, mx, my + 3);
+    ctx.restore();
+  });
+  // APs
+  const dets = rogueDetections(env);
+  env.aps.forEach((a, idx) => {
+    const X = wx(a.x), Y = wy(a.y), col = a.rogue ? '#d7443a' : AP_COL[idx % AP_COL.length];
+    const sel = ui.sel && ui.sel.type === 'ap' && ui.sel.id === a.id;
+    const on = a.on[s.band];
+    ctx.save();
+    if (!a.own) ctx.setLineDash([3, 2]);
+    apShape(X, Y, a.tipo);
+    ctx.fillStyle = on ? (a.own || a.rogue ? col : '#ffffff') : '#c8ccd2'; ctx.fill();
+    ctx.lineWidth = sel ? 4 : 2; ctx.strokeStyle = sel ? '#ffcc00' : (a.own ? '#fff' : '#555'); ctx.stroke();
+    if (a.tipo === 'roteador') { ctx.setLineDash([]); ctx.strokeStyle = a.own || a.rogue ? col : '#555'; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(X - 8, Y - 9); ctx.lineTo(X - 10, Y - 17); ctx.moveTo(X + 8, Y - 9); ctx.lineTo(X + 10, Y - 17); ctx.stroke(); }
+    ctx.restore();
+    const light = (a.own || a.rogue) && on;
+    if (a.rogue) {
+      ctx.fillStyle = '#fff'; ctx.font = '700 14px "IBM Plex Sans", system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', X, Y + 1);
+      const d = dets.find(x => x.rogue === a);
+      if (d) { ctx.save(); ctx.strokeStyle = '#d7443a'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(X, Y, 22, 0, 7); ctx.stroke(); ctx.restore();
+        ctx.fillStyle = '#a11d1d'; ctx.font = '600 10.5px "IBM Plex Sans", system-ui, sans-serif'; ctx.fillText('WIDS: detectado por ' + d.by.nome, X, Y - 27); }
+    } else if (a.tipo === 'repetidor' || a.tipo === 'mesh') {
+      ctx.fillStyle = light ? '#fff' : '#333'; ctx.font = '700 11px "IBM Plex Sans", system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(a.tipo === 'mesh' ? 'M' : 'R', X, Y + 1);
+    } else {
+      // ícone de antena
+      ctx.strokeStyle = light ? '#fff' : '#333'; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(X, Y + 5); ctx.lineTo(X, Y - 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(X, Y - 2, 4, -2.4, -0.74); ctx.stroke();
+      ctx.beginPath(); ctx.arc(X, Y - 2, 7, -2.3, -0.84); ctx.stroke();
+    }
+    const tag = `${a.nome} · ${on ? 'ch ' + chOf(a, s.band) : 'desl.'}`;
+    ctx.font = '600 11px "IBM Plex Sans", system-ui, sans-serif'; const tw = ctx.measureText(tag).width;
+    ctx.fillStyle = '#ffffffe6'; roundRect(X - tw / 2 - 5, Y + 14, tw + 10, 16, 4); ctx.fill();
+    ctx.fillStyle = a.own ? '#14202b' : '#555'; ctx.textAlign = 'center'; ctx.fillText(tag, X, Y + 22.5);
+  });
+  // atacante (vista Exposição)
+  if (s.view === 'expo' && env.atk) {
+    const X = wx(env.atk.x), Y = wy(env.atk.y), sel = ui.sel && ui.sel.type === 'atk';
+    ctx.fillStyle = '#a11d1d'; ctx.strokeStyle = sel ? '#ffcc00' : '#fff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(X, Y - 6, 7, 0, 7); ctx.fill(); ctx.stroke();
+    roundRect(X - 11, Y + 1, 22, 13, 3); ctx.fill(); ctx.stroke();
+    if (env.atk.dir) { ctx.strokeStyle = '#a11d1d'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X + 12, Y - 2); ctx.lineTo(X + 24, Y - 10); ctx.lineTo(X + 24, Y + 6); ctx.closePath(); ctx.stroke(); }
+    ctx.fillStyle = '#a11d1d'; ctx.font = '600 11px "IBM Plex Sans", system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Atacante', clamp(X, 28, VS.w - 28), Y - 20);
+  }
+  // cliente
+  {
+    const X = wx(cl.x), Y = wy(cl.y), sel = ui.sel && ui.sel.type === 'client';
+    ctx.fillStyle = '#14202b'; ctx.strokeStyle = sel ? '#ffcc00' : '#fff'; ctx.lineWidth = 2;
+    roundRect(X - 11, Y - 8, 22, 14, 2.5); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#7dd3fc'; ctx.fillRect(X - 8, Y - 5.5, 16, 9);
+    ctx.fillStyle = '#14202b'; roundRect(X - 14, Y + 6, 28, 4, 2); ctx.fill();
+  }
+  // rascunho de parede
+  if (ui.draft) {
+    const d = ui.draft;
+    ctx.strokeStyle = MATS[ui.mat].cor; ctx.lineWidth = Math.max(3, (+$('#newT').value || .1) * VS.S);
+    ctx.globalAlpha = .7; line(d); ctx.globalAlpha = 1;
+    const L = Math.hypot(d.x2 - d.x1, d.y2 - d.y1);
+    ctx.fillStyle = '#14202b'; ctx.font = '12px "IBM Plex Mono", ui-monospace, monospace'; ctx.fillText(fmt(L, 2) + ' m', wx((d.x1 + d.x2) / 2), wy((d.y1 + d.y2) / 2) - 12);
+  }
+}
+function apShape(X, Y, tipo) {
+  ctx.beginPath();
+  if (tipo === 'ap') ctx.arc(X, Y, 12, 0, 7);
+  else if (tipo === 'repetidor') { ctx.moveTo(X, Y - 13); ctx.lineTo(X + 13, Y); ctx.lineTo(X, Y + 13); ctx.lineTo(X - 13, Y); ctx.closePath(); }
+  else if (tipo === 'mesh') { for (let i = 0; i < 6; i++) { const t = Math.PI / 3 * i + Math.PI / 6, px = X + 12.5 * Math.cos(t), py = Y + 12.5 * Math.sin(t); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.closePath(); }
+  else roundRect(X - 13, Y - 9, 26, 18, 4);
+}
+function line(w) { ctx.beginPath(); ctx.moveTo(wx(w.x1), wy(w.y1)); ctx.lineTo(wx(w.x2), wy(w.y2)); ctx.stroke(); }
+function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function segInter(ax, ay, bx, by, w) {
+  const dx = bx - ax, dy = by - ay, ex = w.x2 - w.x1, ey = w.y2 - w.y1, den = dx * ey - dy * ex;
+  if (!den) return null; const qx = w.x1 - ax, qy = w.y1 - ay;
+  const t = (qx * ey - qy * ex) / den, u = (qx * dy - qy * dx) / den;
+  return (t > 0 && t < 1 && u >= 0 && u <= 1) ? [ax + dx * t, ay + dy * t] : null;
+}
+function rgba(c) { return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${c[3]})`; }
+function drawRays() {
+  if (!rays) return;
+  const D = anim.on ? anim.D : Infinity;
+  ctx.lineCap = 'round';
+  for (const sg of rays.segs) {
+    if (sg.d1 > D) continue;
+    let x2 = sg.x2, y2 = sg.y2, p2 = sg.p2;
+    if (sg.d2 > D) { const f = (D - sg.d1) / (sg.d2 - sg.d1); x2 = sg.x1 + (sg.x2 - sg.x1) * f; y2 = sg.y1 + (sg.y2 - sg.y1) * f; p2 = sg.p1 + (sg.p2 - sg.p1) * f; }
+    const c1 = SC_RSSI(sg.p1), c2 = SC_RSSI(p2);
+    if (c1[3] < .05 && c2[3] < .05) continue;
+    c1[3] = Math.min(1, c1[3] + .15); c2[3] = Math.min(1, c2[3] + .15);
+    if (Math.abs(sg.p1 - p2) > 3) {
+      const g = ctx.createLinearGradient(wx(sg.x1), wy(sg.y1), wx(x2), wy(y2));
+      g.addColorStop(0, rgba(c1)); g.addColorStop(1, rgba(c2)); ctx.strokeStyle = g;
+    } else ctx.strokeStyle = rgba(c1);
+    ctx.lineWidth = sg.inside ? 3.2 : (sg.g === 0 ? 1.7 : 1.3);
+    ctx.beginPath(); ctx.moveTo(wx(sg.x1), wy(sg.y1)); ctx.lineTo(wx(x2), wy(y2)); ctx.stroke();
+    if (anim.on && sg.d2 > D) { ctx.fillStyle = rgba([...c2.slice(0, 3), 1]); ctx.beginPath(); ctx.arc(wx(x2), wy(y2), 2.4, 0, 7); ctx.fill(); }
+  }
+  for (const p of rays.pts) {
+    if (p.d > D) continue;
+    ctx.fillStyle = p.k === 'R' ? '#f39237' : '#8338ec';
+    ctx.beginPath(); ctx.arc(wx(p.x), wy(p.y), 2.2, 0, 7); ctx.fill();
+  }
+}
+function animLoop(ts) {
+  if (!anim.on) return;
+  const dt = anim.last ? (ts - anim.last) / 1000 : 0; anim.last = ts;
+  anim.D += dt * 7;
+  draw();
+  if (rays && anim.D > rays.maxD) { anim.on = false; $('#rayAnim').textContent = '▶ Animar propagação'; draw(); return; }
+  requestAnimationFrame(animLoop);
+}
+
+/* =====================================================================
+   6. PAINÉIS
+   ===================================================================== */
+let clientEval = null;
+const OBS = {
+  rssi:'<b>Sinal (RSSI):</b> potência recebida do AP mais forte. Referências: ≥ −67 dBm para voz/vídeo, ≥ −75 dBm para navegação, abaixo de −80 dBm a conexão fica instável. Compare as bandas: em 5 GHz a perda no espaço livre é ~7 dB maior (FSPL cresce com 20·log f) e as paredes absorvem mais, então a área coberta encolhe.',
+  sinr:'<b>SINR:</b> relação entre o sinal útil e (ruído + interferência). Um sinal forte não basta: APs no mesmo canal ou em canais sobrepostos (2,4 GHz) e fontes como micro-ondas reduzem a SINR. ≥ 25 dB permite modulações altas; abaixo de 10 dB só as mais robustas funcionam.',
+  rate:'<b>Taxa estimada (PHY):</b> a SINR determina o esquema de modulação e codificação (MCS). Mais SINR → modulação mais densa (até 256-QAM) → mais Mbps. A vazão real (TCP) costuma ficar entre 50% e 70% da taxa PHY por causa do overhead do protocolo e da disputa pelo meio.',
+  best:'<b>Melhor AP:</b> cada cor é a célula de um AP, ou seja, a região em que ele é o mais forte. A intensidade mostra o nível de sinal. Bordas de célula muito sobrepostas causam roaming excessivo; buracos entre células causam quedas.',
+  cocanal:'<b>Sobreposição co-canal:</b> quantos APs no mesmo canal (ou em canal sobreposto) o dispositivo "ouve" acima de −82 dBm, que é o limiar de detecção de portadora (CCA). <span class="pill">1</span> é o ideal. Com 2 ou mais, os APs dividem o tempo de transmissão (CSMA/CA) e a capacidade cai.',
+  expo:'<b>Exposição do sinal (segurança física):</b> mostra, fora do imóvel, até onde a rede pode ser captada. <span style="color:#a11d1d">Vermelho</span>: o atacante conecta e faz ataques ativos. <span style="color:#b45309">Laranja</span>: captura o handshake da senha e desautentica clientes. <span style="color:#8a6d00">Amarelo</span>: apenas detecta a rede. Para reduzir a exposição: posicione os APs longe das paredes externas, reduza a potência ou use paredes e vidros que bloqueiam o sinal. Uma antena direcional (+15 dBi) aumenta muito o alcance do atacante.',
+  raios:'<b>Traçado de raios:</b> cada raio leva a energia do AP selecionado. Ao encontrar uma parede, parte é <b>refletida</b> (ângulo de reflexão = ângulo de incidência; metal, espelho e água refletem muito), e parte é <b>transmitida</b>: ela sofre <b>refração</b> dentro do material (lei de Snell) e <b>absorção</b> (perda proporcional ao caminho percorrido dentro da parede). Use a animação para ver a frente de onda (em câmera ultralenta).',
+};
+function legendHTML() {
+  const s = env.settings, v = s.view;
+  const bar = (sc, lo, hi, ticks, unit) => {
+    const g = []; for (let i = 0; i <= 20; i++) { const val = lo + (hi - lo) * i / 20; const c = sc(val); g.push(`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${Math.max(c[3], .15)}) ${i * 5}%`); }
+    return `<div><div class="bar" style="background:linear-gradient(90deg,${g.join(',')})"></div><div class="ticks">${ticks.map(t => `<span>${fmt(t)}</span>`).join('')}</div></div><span>${unit}</span>`;
+  };
+  if (v === 'rssi' || v === 'raios') return bar(SC_RSSI, -92, -35, [-92, -80, -67, -50, -35], 'dBm (RSSI)') + (v === 'raios' ? '<span class="chip"><i style="background:#f39237"></i>reflexão</span><span class="chip"><i style="background:#8338ec"></i>transmissão / refração</span>' : '');
+  if (v === 'sinr') return bar(SC_SINR, -5, 45, [-5, 5, 15, 25, 35, 45], 'dB (SINR)');
+  if (v === 'rate') { const mx = (s.band === 'b24' ? 65 : (RATES[s.width5][9] || RATES[s.width5][8])) * s.ss; return bar(SC_RATE, 0, 1, [0, .25, .5, .75, 1].map(f => f * mx), `Mbps (PHY, ${bwOf(s.band, s)} MHz, ${s.ss}×${s.ss})`) + '<span class="chip"><i style="background:#5a5a5a88"></i>sem enlace</span>'; }
+  if (v === 'best') return env.aps.map((a, i) => a.own && a.on[s.band] ? `<span class="chip"><i style="background:${AP_COL[i % AP_COL.length]}"></i>${a.nome}</span>` : '').join('');
+  if (v === 'expo') return ['conecta e ataca (≥ −70 dBm)', 'captura handshake (−70 a −80)', 'detecta a rede (−80 a −90)'].map((t, i) => `<span class="chip"><i style="background:${['#d7443a', '#f39237', '#f4d35e'][i]}"></i>${t}</span>`).join('') + `<span class="chip"><i style="background:#78828c33"></i>área interna</span><span class="hint">${env.atk.dir ? 'Atacante com antena direcional (+15 dBi).' : ''}</span>`;
+  if (v === 'cocanal') return ['1 AP (ideal)', '2 APs', '3 APs', '4 ou mais'].map((t, i) => `<span class="chip"><i style="background:${rgba(CO_COL[i + 1])}"></i>${t}</span>`).join('');
+  return '';
+}
+function updatePanels() {
+  const s = env.settings;
+  document.querySelectorAll('#bandSeg button').forEach(b => b.classList.toggle('on', b.dataset.b === s.band));
+  document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.w === s.view));
+  document.querySelectorAll('#widthSeg button').forEach(b => b.classList.toggle('on', +b.dataset.x === s.width5));
+  document.querySelectorAll('#ssSeg button').forEach(b => b.classList.toggle('on', +b.dataset.x === s.ss));
+  document.querySelectorAll('#tools button').forEach(b => b.classList.toggle('on', b.dataset.t === ui.tool));
+  document.querySelectorAll('#matlist button').forEach(b => b.classList.toggle('on', b.dataset.m === ui.mat));
+  $('#matPick').style.display = (ui.tool === 'parede' || ui.tool === 'pintar') ? 'block' : 'none';
+  $('#apPickBox').style.display = ui.tool === 'ap' ? 'block' : 'none';
+  if (!ui.apTipo) ui.apTipo = {};
+  const curT = ui.apTipo[env.key] || (env.key === 'corporativo' ? 'ap' : 'mesh');
+  $('#apPick').innerHTML = Object.keys(TIPOS).map(k => `<button data-k="${k}" class="${k === curT ? 'on' : ''}">${TIPOS[k].curto}</button>`).join('');
+  $('#toolHint').textContent = {
+    mover:'Arraste APs, o notebook e o micro-ondas. Clique numa parede para ver/editar o material.',
+    ap:'Escolha o tipo de dispositivo e clique na planta para instalá-lo.',
+    parede:'Clique e arraste para desenhar uma parede do material escolhido (encaixa na grade de 25 cm).',
+    pintar:'Escolha um material e clique nas paredes para trocá-lo.',
+    apagar:'Clique em um AP, objeto ou parede para remover.'}[ui.tool];
+  $('#reflSel').value = s.refl; $('#nExp').value = s.nExp; $('#nExpO').textContent = fmt(s.nExp, 1);
+  $('#useDFS').checked = s.dfs;
+  $('#resSel').innerHTML = env.resOpts.map(r => `<option value="${r}" ${r === s.res ? 'selected' : ''}>${fmt(r * 100)} cm</option>`).join('');
+  $('#rayBox').style.display = s.view === 'raios' ? 'block' : 'none';
+  $('#atkBox').style.display = s.view === 'expo' ? 'block' : 'none';
+  $('#atkDir').checked = !!env.atk.dir;
+  $('#rayNo').textContent = $('#rayN').value; $('#rayDo').textContent = $('#rayD').value;
+  $('#legend').innerHTML = legendHTML();
+  $('#observe').innerHTML = OBS[s.view];
+  $('#activities').innerHTML = ACTIVITIES[env.key].map(t => `<li>${t}</li>`).join('');
+  updateClient(); updateStats(); updateSel(); updateSec(); updateAtk();
+}
+function updateClient() {
+  const s = env.settings, cl = env.client;
+  const evs = {b24:evalPoint(env, 'b24', cl.x, cl.y, true), b5:evalPoint(env, 'b5', cl.x, cl.y, true)};
+  clientEval = evs[s.band];
+  let h = '<div class="cmp">';
+  for (const b of ['b24', 'b5']) {
+    const e = evs[b];
+    const apn = e.s >= 0 ? e.ems[e.s].src.nome : '—';
+    h += `<div class="${b === s.band ? 'cur' : ''}"><small>${BANDS[b].nome} · ${apn}</small>
+      <span class="big">${e.s >= 0 ? fmt(e.rssi) : '—'}</span> <small style="display:inline">dBm</small>
+      <small>SINR ${e.s >= 0 ? fmt(e.sinr) : '—'} dB</small>
+      <small>${!e.rate ? '<b style="color:var(--bad)">sem enlace</b>'
+        : e.rate.semUplink ? '<b style="color:var(--bad)">0 Mbps: o repetidor/mesh não alcança o AP principal</b>'
+        : `<b>${fmt(e.rate.rate, 0)} Mbps</b> · MCS ${e.rate.mcs} ${MCS[e.rate.mcs].mod}` + (e.rate.bh ? `<br>via ${TIPOS[e.ems[e.s].src.tipo].curto.toLowerCase()}: acesso ${fmt(e.rate.phy)} · backhaul ${fmt(e.rate.bh)} Mbps` : '')}</small></div>`;
+  }
+  h += '</div>';
+  const e = clientEval;
+  if (e.s >= 0) {
+    const em = e.ems[e.s], inf = e.infos[e.s];
+    h += `<table class="kv"><tr><td colspan="2"><b>Orçamento de enlace ${BANDS[s.band].nome}</b> (${em.src.nome}, d = ${fmt(inf.d, 1)} m)</td></tr>
+      <tr><td>Potência TX + ganho da antena</td><td>${fmt(em.src.tx[s.band])} + ${fmt(em.src.gain)} dBm</td></tr>
+      <tr><td>Perda de percurso (n = ${fmt(s.nExp, 1)})</td><td>−${fmt(inf.PL, 1)} dB</td></tr>`;
+    const agg = {};
+    inf.walls.forEach(wl => { const w = env.walls[wl.i]; h += `<tr><td><span class="sw" style="background:${MATS[w.mat].cor}"></span>${MATS[w.mat].nome.split(' (')[0]} ${fmt(w.t * 100)} cm · ${fmt(wl.ang)}°</td><td>−${fmt(wl.l, 1)} dB</td></tr>`; });
+    if (!inf.walls.length) h += '<tr><td>Nenhuma parede no caminho direto</td><td>0 dB</td></tr>';
+    if (s.refl !== 'nao') h += `<tr><td>Ganho por multipercurso (reflexões)</td><td>+${fmt(inf.refl, 1)} dB</td></tr>`;
+    h += `<tr class="tot"><td>RSSI no cliente</td><td>${fmt(e.rssi, 1)} dBm</td></tr>
+      <tr><td>Ruído (${bwOf(s.band, s)} MHz)</td><td>${fmt(noiseDbm(bwOf(s.band, s)), 1)} dBm</td></tr>
+      ${e.rate && e.rate.rate ? `<tr><td>Vazão real estimada (≈ 60% da taxa PHY)</td><td>${fmt(e.rate.rate * 0.6)} Mbps</td></tr>` : ''}</table>`;
+  }
+  $('#clientBody').innerHTML = h;
+}
+function updateStats() {
+  if (!field || !field.stats) return;
+  const st = field.stats, s = env.settings;
+  const bar = (t, v, fmtv) => `<div class="stat"><div class="t"><span>${t}</span><span class="mono">${fmtv}</span></div><div class="b"><i style="width:${clamp(v, 0, 1) * 100}%"></i></div></div>`;
+  $('#statsBody').innerHTML = `<div class="hint" style="margin-bottom:4px">${BANDS[s.band].nome} · ${env.titulo}</div>` +
+    bar('Sinal ≥ −67 dBm (voz/vídeo)', st.c67, fmt(st.c67 * 100) + '%') +
+    bar('Sinal ≥ −75 dBm (navegação)', st.c75, fmt(st.c75 * 100) + '%') +
+    bar('SINR ≥ 20 dB', st.s20, fmt(st.s20 * 100) + '%') +
+    bar('Só 1 AP por canal audível', st.co1, fmt(st.co1 * 100) + '%') +
+    `<div class="stat"><div class="t"><span>Taxa PHY média</span><span class="mono">${fmt(st.rate)} Mbps</span></div></div>`;
+}
+function chOptions(band, cur) {
+  const s = env.settings;
+  const list = band === 'b24' ? CH24 : CH5.filter(c => s.dfs || !isDFS(c) || c === cur);
+  return list.map(c => `<option value="${c}" ${c === cur ? 'selected' : ''}>${c}${band === 'b5' && isDFS(c) ? ' (DFS)' : ''}${band === 'b5' && s.width5 > 20 ? ' → ' + block5(c, s.width5).join('–') : ''}</option>`).join('');
+}
+function updateSel() {
+  const sel = ui.sel, box = $('#selBody');
+  if (!sel) { box.innerHTML = '<span class="hint">Clique em um AP, parede ou objeto para editar.</span>'; return; }
+  if (sel.type === 'ap') {
+    const a = env.aps.find(x => x.id === sel.id); if (!a) { ui.sel = null; return updateSel(); }
+    const radio = b => `<div class="row" style="margin-top:8px"><label><input type="checkbox" data-on="${b}" ${a.on[b] ? 'checked' : ''}> <b>${BANDS[b].nome}</b></label>
+       ${a.tipo === 'repetidor' && a.own ? `<span class="hint">canal ${chOf(a, b)} (segue o AP principal)</span>` : `<select data-ch="${b}">${chOptions(b, a.ch[b])}</select>`}</div>
+       <div class="row"><label>Potência TX</label><input type="range" min="0" max="23" step="1" value="${a.tx[b]}" data-tx="${b}"><output>${a.tx[b]} dBm</output></div>`;
+    box.innerHTML = `<div class="row"><label>Nome</label><input type="text" id="apName" value="${a.nome}" style="width:130px">
+      ${a.own ? '' : '<span class="pill">terceiros</span>'}</div>
+      <div class="row"><label>Tipo / modo</label><select id="apTipo">${Object.keys(TIPOS).map(k => `<option value="${k}" ${k === a.tipo ? 'selected' : ''}>${TIPOS[k].nome}</option>`).join('')}</select></div>
+      <p class="hint" style="margin:2px 0 6px">${TIPOS[a.tipo].desc}</p>
+      ${a.own && a._up ? ['b24', 'b5'].map(b => { const u = a._up[b]; return `<div class="hint">Backhaul ${BANDS[b].nome}: ${u && u.rate ? `${u.ap.nome}, ${fmt(u.rssi)} dBm, ${fmt(u.rate)} Mbps${a.tipo === 'mesh' ? ' (rádio 5 GHz dedicado)' : ''}` : '<b style="color:var(--bad)">sem conexão com o AP principal</b>'}</div>`; }).join('') : ''}
+      ${a.rogue ? `<div class="msg err">AP instalado sem autorização (SSID "${a.ssidR}", rede ${a.segR}). Clientes podem se conectar a ele achando que é a rede da empresa. Ative o WIDS na controladora para detectá-lo e remova-o fisicamente.</div>` : ''}
+      <div class="row"><label>Ganho antena</label><input type="range" min="0" max="8" step="1" value="${a.gain}" id="apGain"><output>${a.gain} dBi</output></div>
+      ${radio('b24')}${radio('b5')}
+      <div class="row"><label><input type="checkbox" id="apOwn" ${a.own ? '' : 'checked'}> AP de vizinho (só interfere)</label></div>
+      <div class="row"><button class="btn danger" id="apDel">Remover AP</button><span class="hint mono">(${fmt(a.x, 1)}; ${fmt(a.y, 1)}) m</span></div>`;
+    $('#apName').oninput = ev => { a.nome = ev.target.value; requestDraw(); };
+    $('#apTipo').onchange = ev => { a.tipo = ev.target.value; changed(); updateSel(); updateSec(); };
+    $('#apGain').oninput = ev => { a.gain = +ev.target.value; ev.target.nextElementSibling.textContent = a.gain + ' dBi'; changed(); };
+    box.querySelectorAll('[data-on]').forEach(el => el.onchange = () => { a.on[el.dataset.on] = el.checked; changed(); });
+    box.querySelectorAll('[data-ch]').forEach(el => el.onchange = () => { a.ch[el.dataset.ch] = +el.value; changed(); });
+    box.querySelectorAll('[data-tx]').forEach(el => el.oninput = () => { a.tx[el.dataset.tx] = +el.value; el.nextElementSibling.textContent = el.value + ' dBm'; changed(true); });
+    $('#apOwn').onchange = ev => { a.own = !ev.target.checked; changed(); updateSel(); };
+    $('#apDel').onclick = () => { env.aps = env.aps.filter(x => x !== a); ui.sel = null; changed(); updateSel(); };
+  } else if (sel.type === 'wall') {
+    const w = env.walls.find(x => x.id === sel.id); if (!w) { ui.sel = null; return updateSel(); }
+    const mp24 = MP.b24[w.mat], mp5 = MP.b5[w.mat];
+    box.innerHTML = `<div class="row"><label>Material</label><select id="wMat">${Object.keys(MATS).map(k => `<option value="${k}" ${k === w.mat ? 'selected' : ''}>${MATS[k].nome}</option>`).join('')}</select></div>
+      <div class="row"><label>Espessura</label><input type="number" id="wT" value="${w.t}" step="0.01" min="0.005" max="0.6" style="width:80px"> m</div>
+      <table class="kv"><tr><td>Comprimento</td><td>${fmt(Math.hypot(w.x2 - w.x1, w.y2 - w.y1), 2)} m</td></tr>
+      <tr><td>Perda a 0° · 2,4 GHz</td><td>${fmt(wallLossP(mp24, w.t, 1), 1)} dB</td></tr>
+      <tr><td>Perda a 0° · 5 GHz</td><td>${fmt(wallLossP(mp5, w.t, 1), 1)} dB</td></tr>
+      <tr><td>Perda a 60° · 5 GHz</td><td>${fmt(wallLossP(mp5, w.t, .5), 1)} dB</td></tr>
+      <tr><td>Refletância a 0°</td><td>${fmt(mp24.R0 * 100)}%</td></tr></table>
+      <div class="row"><button class="btn danger" id="wDel">Remover parede</button></div>`;
+    $('#wMat').onchange = ev => { w.mat = ev.target.value; invalidateGeo(); changed(); updateSel(); };
+    $('#wT').onchange = ev => { w.t = clamp(+ev.target.value || .1, .005, .6); invalidateGeo(); changed(); updateSel(); };
+    $('#wDel').onclick = () => { env.walls = env.walls.filter(x => x !== w); ui.sel = null; invalidateGeo(); changed(); updateSel(); };
+  } else if (sel.type === 'mo') {
+    const m = env.interf.find(x => x.id === sel.id); if (!m) { ui.sel = null; return updateSel(); }
+    box.innerHTML = `<p style="margin:0 0 6px"><b>Forno de micro-ondas</b>: vaza energia em ~2,45 GHz (ciclo de 50%). Afeta apenas a banda de 2,4 GHz, mais forte nos canais altos (9–13).</p>
+      <div class="row"><label><input type="checkbox" id="moOn" ${m.on ? 'checked' : ''}> Ligado</label>
+      <label>EIRP</label><input type="range" min="-5" max="15" value="${m.eirp}" id="moP"><output>${m.eirp} dBm</output></div>
+      <div class="row"><button class="btn danger" id="moDel">Remover</button></div>`;
+    $('#moOn').onchange = ev => { m.on = ev.target.checked; changed(); };
+    $('#moP').oninput = ev => { m.eirp = +ev.target.value; ev.target.nextElementSibling.textContent = m.eirp + ' dBm'; changed(true); };
+    $('#moDel').onclick = () => { env.interf = env.interf.filter(x => x !== m); ui.sel = null; changed(); updateSel(); };
+  } else if (sel.type === 'atk') {
+    box.innerHTML = `<p style="margin:0">Atacante em (${fmt(env.atk.x, 1)}; ${fmt(env.atk.y, 1)}) m, fora do imóvel. Veja o que ele consegue fazer no painel <b>Atacante na rua</b> e em <b>Auditoria e ataques</b>.</p>`;
+  } else if (sel.type === 'client') {
+    box.innerHTML = `<p style="margin:0">Notebook cliente em (${fmt(env.client.x, 1)}; ${fmt(env.client.y, 1)}) m. Ele se associa ao AP com o maior RSSI na banda selecionada.</p>`;
+  }
+}
+let changeTimer = null;
+function changed(light) {
+  rayKey = '';
+  requestDraw();
+  clearTimeout(changeTimer);
+  changeTimer = setTimeout(() => { updateClient(); updateStats(); updateSec(); updateAtk(); }, light ? 120 : 30);
+  if (!light) setTimeout(() => { $('#legend').innerHTML = legendHTML(); }, 0);
+}
+
+/* =====================================================================
+   7. INTERAÇÃO
+   ===================================================================== */
+function ptr(ev) { const r = cv.getBoundingClientRect(); return {px:ev.clientX - r.left, py:ev.clientY - r.top, x:sxw(ev.clientX - r.left), y:syw(ev.clientY - r.top)}; }
+function hit(p) {
+  const near = (x, y, r) => Math.hypot(wx(x) - p.px, wy(y) - p.py) <= r;
+  if (env.settings.view === 'expo' && env.atk && near(env.atk.x, env.atk.y + .1, 16)) return {type:'atk'};
+  if (near(env.client.x, env.client.y, 15)) return {type:'client'};
+  for (let i = env.aps.length - 1; i >= 0; i--) if (near(env.aps[i].x, env.aps[i].y, 14)) return {type:'ap', id:env.aps[i].id};
+  for (const m of env.interf) if (near(m.x, m.y, 14)) return {type:'mo', id:m.id};
+  let best = null, bd = 8;
+  for (const w of env.walls) {
+    const ax = wx(w.x1), ay = wy(w.y1), bx = wx(w.x2), by = wy(w.y2);
+    const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1;
+    const t = clamp(((p.px - ax) * dx + (p.py - ay) * dy) / L2, 0, 1);
+    const d = Math.hypot(ax + dx * t - p.px, ay + dy * t - p.py);
+    if (d < bd) { bd = d; best = {type:'wall', id:w.id}; }
+  }
+  return best;
+}
+function objOf(h) {
+  if (!h) return null;
+  if (h.type === 'client') return env.client;
+  if (h.type === 'atk') return env.atk;
+  if (h.type === 'ap') return env.aps.find(a => a.id === h.id);
+  if (h.type === 'mo') return env.interf.find(a => a.id === h.id);
+  return null;
+}
+const snap = (v, g) => Math.round(v / g) * g;
+function snapPt(x, y) {
+  for (const w of env.walls) for (const [px, py] of [[w.x1, w.y1], [w.x2, w.y2]]) if (Math.hypot(px - x, py - y) < .3) return [px, py];
+  return [snap(x, .25), snap(y, .25)];
+}
+cv.addEventListener('pointerdown', ev => {
+  const p = ptr(ev); cv.setPointerCapture(ev.pointerId);
+  const h = hit(p);
+  if (ui.tool === 'mover') {
+    ui.sel = h; updateSel();
+    const o = objOf(h);
+    if (o) ui.drag = {o, dx:o.x - p.x, dy:o.y - p.y};
+    if (h && h.type === 'ap' && env.settings.view === 'raios') rayKey = '';
+    requestDraw();
+  } else if (ui.tool === 'ap') {
+    const corp = env.key === 'corporativo';
+    const tipo = (ui.apTipo && ui.apTipo[env.key]) || (corp ? 'ap' : 'mesh');
+    const n = env.aps.filter(a => a.own && a.tipo === tipo).length + 1;
+    const a = mkAP(TIPOS[tipo].curto + ' ' + n, snap(p.x, .1), snap(p.y, .1), corp ? {c24:1, c5:149, t24:17, t5:20, g:4, tipo} : {c24:11, c5:149, t24:20, t5:20, g:2, tipo});
+    env.aps.push(a); ui.sel = {type:'ap', id:a.id}; ui.tool = 'mover'; changed(); updatePanels();
+  } else if (ui.tool === 'parede') {
+    const [x, y] = snapPt(p.x, p.y); ui.draft = {x1:x, y1:y, x2:x, y2:y};
+  } else if (ui.tool === 'pintar') {
+    if (h && h.type === 'wall') { const w = env.walls.find(x => x.id === h.id); w.mat = ui.mat; invalidateGeo(); ui.sel = h; changed(); updateSel(); }
+  } else if (ui.tool === 'apagar') {
+    if (!h || h.type === 'client') return;
+    if (h.type === 'ap') env.aps = env.aps.filter(a => a.id !== h.id);
+    if (h.type === 'mo') env.interf = env.interf.filter(a => a.id !== h.id);
+    if (h.type === 'wall') { env.walls = env.walls.filter(a => a.id !== h.id); invalidateGeo(); }
+    ui.sel = null; changed(); updateSel();
+  }
+});
+cv.addEventListener('pointermove', ev => {
+  const p = ptr(ev);
+  if (ui.drag) {
+    const b = env.bounds;
+    ui.drag.o.x = clamp(snap(p.x + ui.drag.dx, .05), b.x0 + .2, b.x1 - .2);
+    ui.drag.o.y = clamp(snap(p.y + ui.drag.dy, .05), b.y0 + .2, b.y1 - .2);
+    if (ui.drag.o === env.atk) { updateAtk(); requestDraw(); return; }
+    ui.dragging = true; rayKey = '';
+    if (ui.drag.o === env.client) updateClient(); else changed(true);
+    requestDraw();
+  } else if (ui.draft) {
+    let [x, y] = snapPt(p.x, p.y);
+    const d = ui.draft;
+    if (Math.abs(x - d.x1) < Math.abs(y - d.y1) * 0.18) x = d.x1;
+    if (Math.abs(y - d.y1) < Math.abs(x - d.x1) * 0.18) y = d.y1;
+    d.x2 = x; d.y2 = y; requestDraw();
+  }
+  // leitura do ponto
+  if (field && field.nx) {
+    const F = field, b = env.bounds;
+    const i = Math.floor((p.x - b.x0) / F.res), j = Math.floor((p.y - b.y0) / F.res);
+    if (i >= 0 && j >= 0 && i < F.nx && j < F.ny) {
+      const c = j * F.nx + i;
+      const ap = F.best[c] >= 0 ? F.ems[F.best[c]].src.nome : '—';
+      $('#hud').textContent = `${fmt(p.x, 1)}; ${fmt(p.y, 1)} m │ ${fmt(F.rssi[c])} dBm │ SINR ${fmt(F.sinr[c])} dB │ ${F.rate[c] ? fmt(F.rate[c]) + ' Mbps' : 'sem enlace'} │ ${ap}`;
+    }
+  }
+  const h = hit(p);
+  cv.style.cursor = ui.tool === 'mover' ? (objOf(h) ? 'grab' : (h ? 'pointer' : 'default')) : (ui.tool === 'parede' || ui.tool === 'ap' ? 'crosshair' : (h ? 'pointer' : 'default'));
+});
+function endPtr() {
+  if (ui.drag) {
+    const wasClient = ui.drag.o === env.client;
+    ui.drag = null;
+    if (ui.dragging) { ui.dragging = false; rayKey = ''; if (!wasClient) changed(); else updateClient(); requestDraw(); updateSel(); }
+  }
+  if (ui.draft) {
+    const d = ui.draft; ui.draft = null;
+    if (Math.hypot(d.x2 - d.x1, d.y2 - d.y1) >= .2) {
+      W(env.walls, d.x1, d.y1, d.x2, d.y2, ui.mat, clamp(+$('#newT').value || MATS[ui.mat].t0, .005, .6));
+      invalidateGeo(); ui.sel = {type:'wall', id:env.walls[env.walls.length - 1].id}; changed(); updateSel();
+    }
+    requestDraw();
+  }
+}
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('pointerleave', () => { $('#hud').textContent = ''; });
+window.addEventListener('keydown', ev => {
+  if (ev.target.matches('input,select,textarea')) return;
+  if ((ev.key === 'Delete' || ev.key === 'Backspace') && ui.sel && ui.sel.type !== 'client') {
+    const h = ui.sel;
+    if (h.type === 'ap') env.aps = env.aps.filter(a => a.id !== h.id);
+    if (h.type === 'mo') env.interf = env.interf.filter(a => a.id !== h.id);
+    if (h.type === 'wall') { env.walls = env.walls.filter(a => a.id !== h.id); invalidateGeo(); }
+    ui.sel = null; changed(); updateSel();
+  }
+  if (ev.key === 'Escape') { ui.sel = null; ui.draft = null; updateSel(); requestDraw(); }
+});
+
+// controles
+$('#bandSeg').onclick = ev => { const b = ev.target.dataset.b; if (b) { env.settings.band = b; changed(); updatePanels(); } };
+$('#viewSeg').onclick = ev => { const w = ev.target.dataset.w; if (w) { env.settings.view = w; anim.on = false; changed(); updatePanels(); } };
+$('#widthSeg').onclick = ev => { const x = +ev.target.dataset.x; if (x) { env.settings.width5 = x; changed(); updatePanels(); } };
+$('#ssSeg').onclick = ev => { const x = +ev.target.dataset.x; if (x) { env.settings.ss = x; changed(); updatePanels(); } };
+$('#tools').onclick = ev => { const b = ev.target.closest('button'); if (b) { ui.tool = b.dataset.t; updatePanels(); } };
+$('#reflSel').onchange = ev => { env.settings.refl = ev.target.value; changed(); };
+$('#nExp').oninput = ev => { env.settings.nExp = +ev.target.value; $('#nExpO').textContent = fmt(env.settings.nExp, 1); changed(true); };
+$('#resSel').onchange = ev => { env.settings.res = +ev.target.value; changed(); };
+$('#useDFS').onchange = ev => { env.settings.dfs = ev.target.checked; updateSel(); };
+['#rayN', '#rayD', '#rayR', '#rayT'].forEach(id => $(id).addEventListener('input', () => { $('#rayNo').textContent = $('#rayN').value; $('#rayDo').textContent = $('#rayD').value; anim.on = false; requestDraw(); }));
+$('#rayAnim').onclick = () => {
+  if (anim.on) { anim.on = false; $('#rayAnim').textContent = '▶ Animar propagação'; requestDraw(); return; }
+  anim = {on:true, D:0, last:0}; $('#rayAnim').textContent = '■ Parar'; requestAnimationFrame(animLoop);
+};
+$('#matlist').innerHTML = Object.keys(MATS).map(k => `<button data-m="${k}"><i style="background:${MATS[k].cor}"></i>${MATS[k].nome.split(' (')[0]}</button>`).join('');
+$('#matlist').onclick = ev => { const b = ev.target.closest('button'); if (b) { ui.mat = b.dataset.m; $('#newT').value = MATS[ui.mat].t0; updatePanels(); } };
+$('#newT').value = MATS[ui.mat].t0;
+$('#matbar').innerHTML = Object.keys(MATS).map(k => `<span><i style="background:${MATS[k].cor}"></i>${MATS[k].nome.split(' (')[0]}</span>`).join('');
+$('#resetEnv').onclick = () => { ENVS[env.key] = BUILDERS[env.key](); const v = env.settings.view, b = env.settings.band; env = ENVS[env.key]; env.settings.view = v; env.settings.band = b; ui.sel = null; invalidateGeo(); changed(); updatePanels(); };
+$('#factoryCh').onclick = () => { env.aps.forEach(a => { if (a.own) { a.ch.b24 = 6; a.ch.b5 = 36; } }); changed(); updateSel(); };
+$('#addNeigh').onclick = () => { const b = env.bounds; const a = mkAP('Vizinho', b.x0 + 1, b.y0 + 1.2, {own:false, c24:6, c5:36}); env.aps.push(a); ui.sel = {type:'ap', id:a.id}; changed(); updateSel(); };
+$('#addMO').onclick = () => { const b = env.bounds; const m = {id:UID++, kind:'mo', nome:'Micro-ondas', x:(b.x0 + b.x1) / 2, y:(b.y0 + b.y1) / 2, on:true, eirp:6}; env.interf.push(m); ui.sel = {type:'mo', id:m.id}; changed(); updateSel(); };
+$('#autoCh').onclick = () => { autoChannels(env); changed(); updateSel(); };
+
+function autoChannels(e) {
+  const s = e.settings;
+  for (const band of ['b24', 'b5']) {
+    const G = getGeo(e, band);
+    let cands;
+    if (band === 'b24') cands = [1, 6, 11];
+    else {
+      const pr = s.width5 === 20 ? CH5 : BLK[s.width5].map(b => b[0]);
+      cands = pr.filter(c => s.dfs || !isDFS(c));
+    }
+    const aps = e.aps.filter(a => a.on[band]);
+    const own = aps.filter(a => a.own);
+    // matriz de acoplamento: potência de j ouvida na posição de i
+    const Wm = new Map();
+    const key = (a, b) => a.id + '_' + b.id;
+    for (const a of own) for (const b of aps) if (a !== b) {
+      const em = {x:b.x, y:b.y, eirp:b.tx[band] + b.gain};
+      Wm.set(key(a, b), mw(rx(G, em, a.x, a.y, band, s.nExp, 'nao')));
+    }
+    const cost = (a, ch) => {
+      let c = 0;
+      for (const b of aps) if (b !== a && (!b.own || b._assigned)) c += overlapCh(band, ch, b.ch[band], s.width5) * Wm.get(key(a, b));
+      return c;
+    };
+    own.forEach(a => a._assigned = false);
+    // ordem: APs mais "acoplados" primeiro
+    const order = own.slice().sort((a, b) => aps.reduce((t, x) => t + (x !== b ? Wm.get(key(b, x)) || 0 : 0), 0) - aps.reduce((t, x) => t + (x !== a ? Wm.get(key(a, x)) || 0 : 0), 0));
+    for (let pass = 0; pass < 4; pass++) for (const a of order) {
+      let best = cands[0], bc = Infinity;
+      cands.forEach((ch, i) => { const c = cost(a, ch) * (1 + i * 1e-3); if (c < bc) { bc = c; best = ch; } });
+      a.ch[band] = best; a._assigned = true;
+    }
+    own.forEach(a => delete a._assigned);
+  }
+}
+
+/* =====================================================================
+   8. LABORATÓRIO DE MATERIAIS
+   ===================================================================== */
+const lab = {mat:'concreto', band:'b24', ang:30, t:MATS.concreto.t0};
+$('#labMat').innerHTML = Object.keys(MATS).map(k => `<option value="${k}">${MATS[k].nome}</option>`).join('');
+$('#labMat').value = lab.mat;
+$('#labMat').onchange = ev => { lab.mat = ev.target.value; lab.t = MATS[lab.mat].t0; drawLab(); };
+$('#labBand').onclick = ev => { const b = ev.target.dataset.b; if (b) { lab.band = b; drawLab(); } };
+$('#labAng').oninput = ev => { lab.ang = +ev.target.value; drawLab(); };
+$('#labT').oninput = ev => { lab.t = +ev.target.value; drawLab(); };
+function labPhys(mat, band, angDeg, t) {
+  const mp = MP[band][mat], cosI = Math.cos(angDeg * Math.PI / 180);
+  const f = interfaceAt(mp, cosI);
+  const A = Math.pow(10, -(mp.absPerM * t / f.cosT) / 10);
+  const T = (1 - f.R) ** 2 * A;
+  const Rt = f.R + (1 - f.R) ** 2 * A * A * f.R;
+  return {R:f.R, cosT:f.cosT, A, T, Rt, Ab:Math.max(0, 1 - T - Rt), Lt:-10 * log10(T), Lr:-10 * log10(f.R), metal:mp.Rfix != null, n:mp.n, absDb:mp.absPerM * t / f.cosT};
+}
+function drawLab() {
+  document.querySelectorAll('#labBand button').forEach(b => b.classList.toggle('on', b.dataset.b === lab.band));
+  $('#labAng').value = lab.ang; $('#labAngO').textContent = lab.ang + '°';
+  $('#labT').value = lab.t; $('#labTO').textContent = fmt(lab.t * 100, 1) + ' cm';
+  const c = $('#labCanvas'), g = c.getContext('2d'), Wc = c.width, Hc = c.height;
+  const m = MATS[lab.mat], ph = labPhys(lab.mat, lab.band, lab.ang, lab.t), lam = BANDS[lab.band].lambda;
+  g.clearRect(0, 0, Wc, Hc); g.fillStyle = '#fbfaf7'; g.fillRect(0, 0, Wc, Hc);
+  const S = 900; // px por metro
+  let wpx = lab.t * S, scaled = false;
+  if (wpx < 22) { wpx = 22; scaled = true; } if (wpx > 260) { wpx = 260; scaled = true; }
+  const cx = Wc / 2, cy = Hc / 2 - 30, xL = cx - wpx / 2, xR = cx + wpx / 2;
+  // parede
+  g.fillStyle = m.cor + 'cc'; g.fillRect(xL, 14, wpx, Hc - 92);
+  g.strokeStyle = m.cor; g.lineWidth = 2; g.strokeRect(xL, 14, wpx, Hc - 92);
+  g.fillStyle = '#1d232b'; g.font = '600 13px "IBM Plex Sans", system-ui, sans-serif'; g.textAlign = 'center';
+  g.fillText(m.nome.split(' (')[0] + ' · ' + fmt(lab.t * 100, 1) + ' cm' + (scaled ? ' (fora de escala)' : ''), cx, Hc - 60);
+  g.font = '12px "IBM Plex Sans", system-ui, sans-serif'; g.fillStyle = '#5d6672';
+  g.fillText('ar (n = 1)', xL - 60, Hc - 60); g.fillText('ar (n = 1)', xR + 60, Hc - 60);
+  // normal
+  g.setLineDash([5, 5]); g.strokeStyle = '#00000055'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(xL - 220, cy); g.lineTo(xL + 40, cy); g.stroke(); g.setLineDash([]);
+  const th = lab.ang * Math.PI / 180, cT = ph.cosT, sT = Math.sqrt(1 - cT * cT);
+  const Lr = 330;
+  const inc0 = [xL - Math.cos(th) * Lr, cy - Math.sin(th) * Lr];
+  const insideEnd = [xR, cy + wpx * (sT / cT)];
+  const tEnd = [insideEnd[0] + Math.cos(th) * Lr, insideEnd[1] + Math.sin(th) * Lr];
+  const rEnd = [xL - Math.cos(th) * Lr, cy + Math.sin(th) * Lr];
+  const ray = (a, b, frac, col, lamPx, fade) => {
+    const wdt = 1.5 + 18 * Math.sqrt(clamp(frac, 0, 1));
+    g.strokeStyle = col; g.lineWidth = wdt; g.lineCap = 'round'; g.globalAlpha = .85;
+    g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); g.globalAlpha = 1;
+    // frentes de onda (cristas) a cada comprimento de onda
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;
+    if (lamPx < 4) return;
+    g.strokeStyle = '#ffffff'; g.lineWidth = 1.6;
+    for (let s = lamPx / 2; s < L; s += lamPx) {
+      const px = a[0] + ux * s, py = a[1] + uy * s, h = wdt / 2 + 3;
+      g.globalAlpha = fade ? clamp(fade(s / L), .15, 1) : 1;
+      g.beginPath(); g.moveTo(px - uy * h, py + ux * h); g.lineTo(px + uy * h, py - ux * h); g.stroke();
+    }
+    g.globalAlpha = 1;
+  };
+  const lamPx = lam * S;
+  ray(inc0, [xL, cy], 1, '#1d70b8', lamPx);
+  ray([xL, cy], rEnd, ph.Rt, '#f39237', lamPx);
+  if (!ph.metal) {
+    const T1 = 1 - ph.R;
+    ray([xL, cy], insideEnd, T1, '#8338ec', scaled ? lamPx / ph.n * (wpx / (lab.t * S)) : lamPx / ph.n, f => 1 - f * (1 - ph.A));
+  }
+  ray(ph.metal ? [xR, cy + wpx * Math.tan(th)] : insideEnd, ph.metal ? [xR + Math.cos(th) * Lr, cy + wpx * Math.tan(th) + Math.sin(th) * Lr] : tEnd, ph.T, '#2a9d8f', lamPx);
+  // ângulos
+  g.strokeStyle = '#1d232b'; g.lineWidth = 1.2;
+  g.beginPath(); g.arc(xL, cy, 52, Math.PI, Math.PI + th); g.stroke();
+  g.fillStyle = '#1d232b'; g.font = '600 13px "IBM Plex Sans", system-ui, sans-serif'; g.textAlign = 'right';
+  g.fillText('θᵢ = ' + lab.ang + '°', xL - 58, cy - 12);
+  g.fillText('θᵣ = ' + lab.ang + '°', xL - 58, cy + 22);
+  if (!ph.metal) {
+    const tt = Math.acos(cT) * 180 / Math.PI;
+    g.textAlign = 'left'; const lbl = 'θₜ = ' + fmt(tt, 1) + '°', lw = g.measureText(lbl).width;
+    g.fillStyle = '#ffffffdd'; g.fillRect(xR + 8, cy - 40, lw + 10, 20); g.fillStyle = '#5b21b6'; g.fillText(lbl, xR + 13, cy - 25);
+  }
+  // legendas dos raios
+  g.textAlign = 'left'; g.font = '12.5px "IBM Plex Sans", system-ui, sans-serif';
+  const lg = [['#1d70b8', 'incidente (100%)'], ['#f39237', 'refletida ' + fmt(ph.Rt * 100, 1) + '%'], ['#8338ec', 'refratada (dentro do material)'], ['#2a9d8f', 'transmitida ' + fmt(ph.T * 100, 1) + '%']];
+  const lx0 = Wc - 245; g.fillStyle = '#ffffffe0'; g.fillRect(lx0 - 8, 8, 245, 88);
+  lg.forEach(([col, t], i) => { g.fillStyle = col; g.fillRect(lx0, 16 + i * 20, 14, 10); g.fillStyle = '#1d232b'; g.fillText(t, lx0 + 20, 25 + i * 20); });
+  g.fillStyle = '#5d6672'; g.font = '11.5px "IBM Plex Sans", system-ui, sans-serif';
+  g.fillText('Traços brancos = cristas da onda (espaçamento λ). λ = ' + fmt(lam * 100, 1) + ' cm no ar' + (ph.metal ? '' : '; λ/n = ' + fmt(lam / ph.n * 100, 1) + ' cm no material.'), 16, Hc - 16);
+
+  $('#labFr').innerHTML = `
+    <div><small>Refletida</small><span class="big">${fmt(ph.Rt * 100, 1)}%</span><small>${fmt(-10 * log10(ph.Rt), 1)} dB em relação à incidente</small></div>
+    <div><small>Absorvida no material</small><span class="big">${fmt(ph.Ab * 100, 1)}%</span><small>${fmt(ph.absDb, 1)} dB ao longo de ${fmt(lab.t / cT * 100, 1)} cm</small></div>
+    <div><small>Transmitida</small><span class="big">${fmt(ph.T * 100, ph.T < .01 ? 3 : 1)}%</span><small>perda de ${fmt(ph.Lt, 1)} dB</small></div>`;
+  const tt = Math.acos(cT) * 180 / Math.PI;
+  $('#labText').innerHTML = ph.metal
+    ? `<b>Material condutor:</b> metal e superfícies metalizadas (espelho, vidro Low-E) praticamente não deixam a onda penetrar. Elétrons livres reirradiam a energia e quase tudo é <b>refletido</b>. A pequena parcela transmitida atravessa frestas e bordas. Por isso geladeiras, poços de elevador, racks e espelhos criam "sombras" de sinal e redirecionam energia para outros lugares.`
+    : `<b>Refração (lei de Snell):</b> sen θᵢ = n · sen θₜ → sen ${lab.ang}° = ${fmt(ph.n, 2)} × sen ${fmt(tt, 1)}°. Ao entrar no material (n = √εᵣ = ${fmt(ph.n, 2)}), a onda desacelera, o comprimento de onda encurta para λ/n e o raio se aproxima da normal. Ao sair, ele volta ao ângulo original, só que deslocado.<br>
+       <b>Absorção:</b> a energia é convertida em calor proporcionalmente ao caminho dentro da parede (t / cos θₜ). Em ${BANDS[lab.band].nome} este material atenua cerca de ${fmt(MP[lab.band][lab.mat].absPerM / 100, 2)} dB por cm. Compare as bandas: <b>5 GHz</b> costuma perder mais.<br>
+       <b>Reflexão:</b> a fração refletida cresce com o contraste de n e com o ângulo. Em incidência rasante (θᵢ → 90°) quase tudo reflete. É por isso que um corredor longo funciona como um "guia de onda".`;
+  drawLabCharts();
+}
+function chart(cnv, series, ymax, ylab, mark) {
+  const g = cnv.getContext('2d'), Wc = cnv.width, Hc = cnv.height, l = 44, r = 12, t = 12, b = 30;
+  g.clearRect(0, 0, Wc, Hc); g.fillStyle = '#fff'; g.fillRect(0, 0, Wc, Hc);
+  const X = a => l + a / 85 * (Wc - l - r), Y = v => t + (1 - v / ymax) * (Hc - t - b);
+  g.strokeStyle = '#eee'; g.fillStyle = '#5d6672'; g.font = '11px "IBM Plex Mono", ui-monospace, monospace'; g.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) { const v = ymax * i / 4; g.beginPath(); g.moveTo(l, Y(v)); g.lineTo(Wc - r, Y(v)); g.stroke(); g.textAlign = 'right'; g.fillText(fmt(v), l - 5, Y(v) + 4); }
+  for (let a = 0; a <= 80; a += 20) { g.textAlign = 'center'; g.fillText(a + '°', X(a), Hc - b + 15); }
+  g.textAlign = 'left'; g.fillText(ylab, l + 4, t + 10);
+  series.forEach(sr => {
+    g.strokeStyle = sr.col; g.lineWidth = 2.2; g.beginPath();
+    for (let a = 0; a <= 85; a++) { const v = Math.min(sr.f(a), ymax); a ? g.lineTo(X(a), Y(v)) : g.moveTo(X(a), Y(v)); }
+    g.stroke();
+    g.fillStyle = sr.col; g.beginPath(); g.arc(X(mark), Y(Math.min(sr.f(mark), ymax)), 4.5, 0, 7); g.fill();
+  });
+  g.strokeStyle = '#1d232b55'; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(X(mark), t); g.lineTo(X(mark), Hc - b); g.stroke(); g.setLineDash([]);
+  let lx = Wc - r - 10; g.textAlign = 'right'; g.font = '12px "IBM Plex Sans", system-ui, sans-serif';
+  series.slice().reverse().forEach(sr => { g.fillStyle = sr.col; g.fillText('● ' + sr.nome, lx, t + 12); lx -= g.measureText('● ' + sr.nome).width + 14; });
+}
+function drawLabCharts() {
+  const s24 = a => labPhys(lab.mat, 'b24', a, lab.t).Lt, s5 = a => labPhys(lab.mat, 'b5', a, lab.t).Lt;
+  const ymax = Math.max(10, Math.ceil(Math.max(s24(85), s5(85), s5(0) * 1.6) / 10) * 10);
+  chart($('#labChart1'), [{nome:'2,4 GHz', col:'#1d70b8', f:s24}, {nome:'5 GHz', col:'#e8590c', f:s5}], Math.min(ymax, 60), 'dB', lab.ang);
+  chart($('#labChart2'), [{nome:'refletância', col:'#f39237', f:a => labPhys(lab.mat, lab.band, a, lab.t).R * 100}], 100, '%', lab.ang);
+}
+
+/* =====================================================================
+   9. CONCEITOS
+   ===================================================================== */
+function buildConceitos() {
+  // diagrama de canais 2,4 GHz
+  const Wd = 900, Hd = 170, f0 = 2399, f1 = 2486, X = f => 30 + (f - f0) / (f1 - f0) * (Wd - 60);
+  let svg = `<svg viewBox="0 0 ${Wd} ${Hd}" style="width:100%;background:#fff;border:1px solid var(--line);border-radius:8px">`;
+  for (const ch of CH24) {
+    const fc = 2407 + 5 * ch, main = [1, 6, 11].includes(ch);
+    const col = main ? ({1:'#1d70b8', 6:'#2a9d8f', 11:'#e8590c'})[ch] : '#adb5bd';
+    svg += `<path d="M ${X(fc - 11)} 130 Q ${X(fc)} ${main ? -10 : 20} ${X(fc + 11)} 130" fill="${main ? col + '22' : 'none'}" stroke="${col}" stroke-width="${main ? 2.4 : 1.2}"/>`;
+    svg += `<text x="${X(fc)}" y="148" text-anchor="middle" font-size="12" font-family="IBM Plex Mono" fill="${main ? col : '#868e96'}" font-weight="${main ? 600 : 400}">${ch}</text>`;
+  }
+  svg += `<line x1="30" y1="130" x2="${Wd - 30}" y2="130" stroke="#333"/><text x="30" y="165" font-size="11" fill="#5d6672">2400 MHz</text><text x="${Wd - 30}" y="165" font-size="11" text-anchor="end" fill="#5d6672">2483,5 MHz</text></svg>`;
+  // 5 GHz
+  const g0 = 5150, g1 = 5850, X5 = f => 30 + (f - g0) / (g1 - g0) * (Wd - 60);
+  let svg5 = `<svg viewBox="0 0 ${Wd} 120" style="width:100%;background:#fff;border:1px solid var(--line);border-radius:8px">`;
+  for (const ch of CH5) {
+    const fc = 5000 + 5 * ch, d = isDFS(ch);
+    svg5 += `<rect x="${X5(fc - 10) + 1}" y="20" width="${X5(fc + 10) - X5(fc - 10) - 2}" height="34" fill="${d ? '#f4a26155' : '#2a9d8f44'}" stroke="${d ? '#e8590c' : '#2a9d8f'}"/>`;
+    svg5 += `<text x="${X5(fc)}" y="42" font-size="9.5" text-anchor="middle" font-family="IBM Plex Mono">${ch}</text>`;
+  }
+  BLK[80].forEach(([a, b]) => { svg5 += `<rect x="${X5(5000 + 5 * a - 10) + 1}" y="62" width="${X5(5000 + 5 * b + 10) - X5(5000 + 5 * a - 10) - 2}" height="18" rx="3" fill="#1d70b833" stroke="#1d70b8"/><text x="${(X5(5000 + 5 * a - 10) + X5(5000 + 5 * b + 10)) / 2}" y="75" font-size="10" text-anchor="middle">80 MHz</text>`; });
+  svg5 += `<rect x="30" y="94" width="12" height="12" fill="#2a9d8f44" stroke="#2a9d8f"/><text x="48" y="104" font-size="11">canal de 20 MHz</text><rect x="170" y="94" width="12" height="12" fill="#f4a26155" stroke="#e8590c"/><text x="188" y="104" font-size="11">DFS: o AP precisa ceder o canal se detectar radar</text></svg>`;
+
+  const matRows = Object.keys(MATS).map(k => {
+    const m = MATS[k];
+    return `<tr><td><span class="sw" style="background:${m.cor}"></span>${m.nome}</td><td class="n">${fmt(m.t0 * 100, 1)} cm</td>
+      <td class="n">${m.eps ? fmt(Math.sqrt(m.eps), 2) : 'condutor'}</td><td class="n">${fmt(MP.b24[k].R0 * 100)}%</td>
+      <td class="n">${fmt(wallLossP(MP.b24[k], m.t0, 1), 1)}</td><td class="n">${fmt(wallLossP(MP.b5[k], m.t0, 1), 1)}</td></tr>`;
+  }).join('');
+  const mcsRows = MCS.map((m, i) => `<tr><td class="n">${i}</td><td>${m.mod}</td><td class="n">${m.snr}</td><td class="n">${i <= 7 ? fmt(RATES[20][i], 1) : '—'}</td><td class="n">${RATES[20][i] ? fmt(RATES[20][i], 1) : '—'}</td><td class="n">${fmt(RATES[40][i], 1)}</td><td class="n">${fmt(RATES[80][i], 1)}</td></tr>`).join('');
+
+  $('#conceitosBody').innerHTML = `
+  <h2>1. Por que 2,4 GHz e 5 GHz se comportam de forma diferente?</h2>
+  <div class="grid2">
+  <table class="tbl"><tr><th></th><th>2,4 GHz</th><th>5 GHz</th></tr>
+    <tr><td>Comprimento de onda λ = c/f</td><td class="n">12,3 cm</td><td class="n">5,5 cm</td></tr>
+    <tr><td>Perda no espaço livre a 1 m</td><td class="n">${fmt(BANDS.b24.PL1, 1)} dB</td><td class="n">${fmt(BANDS.b5.PL1, 1)} dB</td></tr>
+    <tr><td>Canais sem sobreposição (20 MHz)</td><td class="n">3 (1, 6, 11)</td><td class="n">até 25</td></tr>
+    <tr><td>Larguras de canal usuais</td><td class="n">20 MHz</td><td class="n">20 / 40 / 80 / 160 MHz</td></tr>
+    <tr><td>Absorção em paredes</td><td>menor</td><td>maior</td></tr>
+    <tr><td>Fontes de interferência</td><td>micro-ondas, Bluetooth, babás eletrônicas, vizinhos</td><td>radares (DFS), poucos dispositivos</td></tr>
+    <tr><td>Uso típico</td><td>alcance, IoT, cômodos distantes</td><td>velocidade, alta densidade</td></tr></table>
+  <div><p>A perda no espaço livre (FSPL) cresce com a frequência:</p>
+   <p class="eq">FSPL(dB) = 20·log₁₀(d) + 20·log₁₀(f<sub>MHz</sub>) − 27,55</p>
+   <p>À mesma distância, 5 GHz perde 20·log₁₀(5500/2437) ≈ <b>7 dB</b> a mais. Rigorosamente, isso não é uma propriedade da onda, e sim da antena receptora: a área efetiva de uma antena isotrópica é λ²/4π, menor em 5 GHz. Além disso, quase todos os materiais de construção absorvem mais em frequências altas.</p>
+   <p>Dentro de prédios, móveis e pessoas aumentam a perda. Por isso o simulador usa um modelo log-distância com expoente <b>n</b> ajustável (2 = espaço livre), somado à perda de cada parede atravessada (modelo multi-paredes):</p>
+   <p class="eq">RSSI = P<sub>TX</sub> + G<sub>ant</sub> − [FSPL(1 m) + 10·n·log₁₀(d)] − Σ L<sub>parede</sub>(θ)</p></div></div>
+  <h3>Canais em 2,4 GHz</h3>${svg}
+  <p class="hint">Os canais ficam a 5 MHz de distância, mas cada um ocupa ~22 MHz. Por isso só 1, 6 e 11 não se sobrepõem. No simulador, a interferência entre canais vizinhos é ponderada pela sobreposição: 1 − |Δcanal|·5/22.</p>
+  <h3>Canais em 5 GHz</h3>${svg5}
+
+  <h2>2. Reflexão, refração e absorção</h2>
+  <div class="grid2"><div>
+  <p><b>Reflexão:</b> quando a onda encontra uma superfície, parte da energia volta com ângulo de reflexão igual ao de incidência. A fração refletida é dada pelas equações de Fresnel e depende do contraste do índice de refração e do ângulo. Metais (geladeira, elevador, racks), espelhos e vidros metalizados refletem quase tudo. A reflexão cria <i>multipercurso</i>: cópias do sinal que chegam por caminhos diferentes. Isso pode ajudar a cobrir áreas sem visada direta, mas também provoca desvanecimento (cancelamentos em pontos a poucos centímetros um do outro).</p>
+  <p><b>Refração:</b> ao entrar num material com índice <i>n</i> = √εᵣ, a onda muda de velocidade (v = c/n) e de direção (lei de Snell: sen θᵢ = n·sen θₜ). O comprimento de onda dentro do material diminui para λ/n. Numa parede de faces paralelas, o raio sai com a direção original, apenas deslocado lateralmente.</p>
+  <p><b>Absorção:</b> o material converte parte da energia em calor. A perda em dB é proporcional ao caminho percorrido dentro dele (t/cos θₜ), então atravessar uma parede na diagonal custa mais que atravessá-la de frente. A água tem εᵣ ≈ 78 e é muito absorvente nessas frequências. Aquários, caixas d'água e o corpo humano atenuam bastante o sinal.</p>
+  <p><b>Não modelados aqui:</b> difração (a onda contornando bordas e portas), espalhamento por superfícies rugosas e interferência coerente entre caminhos (desvanecimento rápido).</p>
+  </div><div>
+  <table class="tbl"><tr><th>Material</th><th>Espessura</th><th>n</th><th>Refletância 0°</th><th>Perda 2,4 GHz (dB)</th><th>Perda 5 GHz (dB)</th></tr>${matRows}</table>
+  <p class="hint">Valores típicos de referência, didáticos, em incidência normal. Materiais reais variam muito (tijolo maciço × furado, concreto armado, umidade). Experimente no Laboratório de materiais.</p></div></div>
+
+  <h2>3. Do sinal à velocidade: RSSI, SINR e MCS</h2>
+  <div class="grid2"><div>
+  <table class="tbl"><tr><th>RSSI</th><th>Qualidade típica</th></tr>
+   <tr><td class="n">≥ −50 dBm</td><td>Excelente</td></tr><tr><td class="n">−50 a −67 dBm</td><td>Muito boa: voz, vídeo, chamadas</td></tr>
+   <tr><td class="n">−67 a −75 dBm</td><td>Razoável: navegação, e-mail</td></tr><tr><td class="n">−75 a −82 dBm</td><td>Fraca e instável</td></tr><tr><td class="n">&lt; −82 dBm</td><td>Praticamente sem serviço</td></tr></table>
+  <p><b>SINR</b> = sinal − (ruído + interferência), em dB. Ruído térmico: −174 dBm/Hz + 10·log₁₀(B) + figura de ruído (7 dB) → ${fmt(noiseDbm(20), 0)} dBm em 20 MHz. Dobrar a largura do canal dobra a taxa, mas aumenta o ruído em 3 dB e reduz o número de canais disponíveis para reuso.</p>
+  <p><b>Co-canal:</b> APs no mesmo canal que se ouvem acima de −82 dBm (limiar de CCA) compartilham o meio pelo CSMA/CA, ou seja, transmitem em turnos. Um bom plano de canais reusa o mesmo canal só entre APs distantes.</p>
+  </div><div>
+  <table class="tbl"><tr><th>MCS</th><th>Modulação</th><th>SINR mín. (dB)</th><th>2,4 GHz 20 MHz</th><th>5 GHz 20</th><th>40</th><th>80 MHz</th></tr>${mcsRows}</table>
+  <p class="hint">Taxas PHY em Mbps por fluxo espacial (GI 800 ns). Multiplique pelo número de fluxos MIMO. Em 2,4 GHz, o simulador considera 802.11n (Wi-Fi 4), com MCS até 7. Em 5 GHz, 802.11ac (Wi-Fi 5), com MCS até 9.</p></div></div>
+
+  <h2>4. Boas práticas de posicionamento</h2>
+  <div class="grid2"><div><h3>Residência</h3><ul>
+   <li>Instale o roteador em posição central e elevada (1,5 a 2 m), com as antenas em pé.</li>
+   <li>Evite armários, a parte de trás da TV, geladeiras, espelhos, aquários e o chão.</li>
+   <li>Em 2,4 GHz, use 1, 6 ou 11, o que estiver menos ocupado pelos vizinhos.</li>
+   <li>Para casas grandes ou com paredes de concreto, use sistemas mesh ou APs cabeados em vez de aumentar a potência.</li>
+   <li>Prefira 5 GHz para os cômodos próximos e deixe 2,4 GHz para alcance e IoT.</li></ul></div>
+  <div><h3>Ambiente corporativo</h3><ul>
+   <li>Faça um <i>site survey</i> (preditivo e depois medido) com meta de RSSI e SINR por área.</li>
+   <li>Projete por capacidade: mais APs com potência menor formam células pequenas, com menos clientes por AP.</li>
+   <li>Planeje canais: 1/6/11 em 2,4 GHz, e desligue o rádio 2,4 GHz em parte dos APs em áreas densas.</li>
+   <li>Em 5 GHz, use 20 ou 40 MHz em alta densidade e 80 MHz onde há poucos APs. Considere os canais DFS.</li>
+   <li>Ajuste a potência do AP à do cliente (celulares transmitem ~15 dBm). Um enlace assimétrico gera "sinal cheio, rede lenta".</li>
+   <li>Atenção a poços de elevador, data centers, vidros Low-E e áreas de copa (micro-ondas).</li></ul></div></div>
+
+  <h2>5. Segurança em redes sem fio</h2>
+  <p>O sinal Wi-Fi atravessa paredes e chega à rua, e qualquer pessoa no alcance pode captá-lo. Por isso a segurança combina <b>criptografia</b> (ninguém lê o tráfego), <b>autenticação</b> (só entra quem pode), <b>segmentação</b> (cada grupo na sua rede) e <b>configuração segura do equipamento</b>.</p>
+  <div class="grid2"><div>
+  <table class="tbl"><tr><th>Modo</th><th>Ano</th><th>Criptografia</th><th>Situação</th></tr>
+    <tr><td>Aberta</td><td>—</td><td>nenhuma</td><td>tráfego legível por qualquer um</td></tr>
+    <tr><td>WEP</td><td>1997</td><td>RC4</td><td>quebrado em minutos: não usar</td></tr>
+    <tr><td>WPA (TKIP)</td><td>2003</td><td>RC4/TKIP</td><td>obsoleto: não usar</td></tr>
+    <tr><td>WPA2-Personal</td><td>2004</td><td>AES-CCMP</td><td>seguro com senha forte; vulnerável a dicionário offline</td></tr>
+    <tr><td>WPA3-Personal</td><td>2018</td><td>AES + SAE</td><td>resiste a dicionário offline; PMF obrigatório</td></tr>
+    <tr><td>WPA2/WPA3-Enterprise</td><td>2004 / 2018</td><td>AES + 802.1X (RADIUS)</td><td>credencial individual: padrão em empresas</td></tr>
+    <tr><td>Enhanced Open (OWE)</td><td>2018</td><td>AES, sem senha</td><td>cifra redes públicas, sem autenticar</td></tr></table>
+  <p class="hint">Na interface simulada (<b>Configurar a rede</b>), o tempo de quebra de uma senha WPA2 é estimado para 1 milhão de tentativas por segundo, a ordem de grandeza de uma placa de vídeo atual.</p>
+  </div><div>
+  <h3 style="margin-top:0">Lista de verificação da instalação</h3><ul>
+   <li>Trocar a senha de administração e atualizar o firmware.</li>
+   <li>WPA2-AES ou WPA3, com senha longa e aleatória (12 ou mais caracteres). Em empresas, 802.1X.</li>
+   <li>Desligar o WPS e o gerenciamento remoto; acessar a interface por HTTPS.</li>
+   <li>Ativar o PMF (802.11w).</li>
+   <li>Rede de convidados isolada; em empresas, VLANs separadas para usuários, visitantes, IoT e gerência.</li>
+   <li>Detectar APs não autorizados (WIDS) e controlar o acesso às portas do switch.</li>
+   <li>Reduzir o sinal fora do imóvel: posição dos APs, potência e materiais.</li></ul>
+  <p><b>Mitos:</b> ocultar o SSID e filtrar endereços MAC <i>não</i> protegem a rede. O nome aparece nos pedidos de conexão e o MAC pode ser copiado.</p>
+  <p class="hint">Testes de invasão só podem ser feitos em equipamentos próprios ou com autorização. Acessar redes de terceiros é crime (Lei 12.737/2012).</p></div></div>
+
+  <h2>6. Limitações do modelo</h2>
+  <p>Este simulador é <b>didático</b>. Ele usa um modelo multi-paredes 2D com perdas dependentes do ângulo (Fresnel TE + absorção ao longo do caminho), reflexões de 1ª ordem somadas em potência (incoerentes), antenas omnidirecionais e enlace apenas descendente. Para objetos pequenos (geladeira, aquário, racks), a perda é limitada a ~14 dB, como aproximação da difração ao redor deles. O backhaul de repetidores e nós mesh considera só o sinal e o ruído, e a segurança é avaliada por regras (lista de verificação), sem simular o tráfego. Ele não modela difração, múltiplos andares, desvanecimento rápido, contenção real do CSMA/CA nem as capacidades do dispositivo cliente. Para projetos reais, use ferramentas de site survey e medições em campo.</p>`;
+}
+
+/* =====================================================================
+   9. SEGURANÇA DA REDE
+   ===================================================================== */
+const SEG = {
+  aberta:  {nome:'Aberta (sem criptografia)'},
+  wep:     {nome:'WEP (obsoleto)', psk:true},
+  wpa_tkip:{nome:'WPA-Personal (TKIP)', psk:true},
+  wpa2:    {nome:'WPA2-Personal (AES)', psk:true},
+  wpa2wpa3:{nome:'WPA2/WPA3-Personal (transição)', psk:true},
+  wpa3:    {nome:'WPA3-Personal (SAE)', psk:true},
+  owe:     {nome:'Enhanced Open (OWE)'},
+  wpa2ent: {nome:'WPA2-Enterprise (802.1X)', ent:true},
+  wpa3ent: {nome:'WPA3-Enterprise (802.1X)', ent:true},
+};
+const SEG_DOM = ['aberta', 'wep', 'wpa_tkip', 'wpa2', 'wpa2wpa3', 'wpa3', 'owe'];
+const COMMON_PW = ['12345678','123456789','1234567890','password','senha123','senha1234','qwerty123','11111111','00000000','87654321','abcd1234','admin123','wifi1234','internet','iloveyou','minhasenha','empresa2024','empresa123','12341234','senhawifi'];
+const WEAK_WORDS = ['senha','wifi','casa','admin','empresa','internet','familia','amor','brasil','teste','rede','password','qwerty'];
+const DEFAULT_ADMIN = ['admin','','password','1234','12345','123456','root','senha','admin123'];
+const isDefaultAdmin = pw => DEFAULT_ADMIN.includes(String(pw || '').toLowerCase());
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function pwStrength(pw, ssid) {
+  pw = pw || '';
+  if (!pw) return {bits:0, nivel:0, label:'vazia', motivo:'sem senha'};
+  const low = pw.toLowerCase();
+  if (COMMON_PW.includes(low)) return {bits:8, nivel:0, label:'muito fraca', motivo:'está nas listas de senhas mais usadas e vazadas'};
+  let pool = 0;
+  if (/[a-z]/.test(pw)) pool += 26; if (/[A-Z]/.test(pw)) pool += 26;
+  if (/[0-9]/.test(pw)) pool += 10; if (/[^A-Za-z0-9]/.test(pw)) pool += 33;
+  let bits = pw.length * Math.log2(Math.max(pool, 2));
+  const m = [];
+  for (const w of WEAK_WORDS) if (low.includes(w)) { bits -= 4 * w.length; m.push(`contém a palavra comum "${w}"`); }
+  if (ssid && ssid.length >= 4 && low.includes(ssid.toLowerCase())) { bits -= 15; m.push('contém o nome da rede'); }
+  if (/(.)\1{2,}/.test(pw)) { bits -= 10; m.push('tem caracteres repetidos'); }
+  if (/(0123|1234|2345|3456|4567|5678|6789|abcd|qwer|asdf)/i.test(pw)) { bits -= 12; m.push('tem sequência de teclado ou de números'); }
+  if (/(19|20)\d\d/.test(pw)) { bits -= 6; m.push('contém um ano'); }
+  if (/^\d+$/.test(pw)) m.push('só tem números');
+  bits = Math.max(bits, 6);
+  const nivel = bits < 28 ? 0 : bits < 40 ? 1 : bits < 60 ? 2 : bits < 80 ? 3 : 4;
+  return {bits, nivel, label:['muito fraca', 'fraca', 'razoável', 'forte', 'muito forte'][nivel], motivo:m.join('; ')};
+}
+function tempoQuebra(bits, taxa) {
+  const sec = Math.pow(2, bits - 1) / taxa;
+  if (sec < 1) return 'menos de 1 segundo';
+  const u = [[60, 'segundos', 1], [3600, 'minutos', 60], [86400, 'horas', 3600], [86400 * 365, 'dias', 86400], [86400 * 365 * 1000, 'anos', 86400 * 365]];
+  for (const [lim, nome, div] of u) if (sec < lim) return `≈ ${fmt(sec / div)} ${nome}`;
+  return 'mais de mil anos';
+}
+function meterHTML(pw, ssid, psk) {
+  const st = pwStrength(pw, ssid), cols = ['#d7443a', '#f39237', '#e0b400', '#8bc34a', '#2a9d8f'];
+  const inval = psk && (String(pw || '').length < 8 || String(pw || '').length > 63);
+  return `<span class="meter"><i style="width:${(st.nivel + 1) * 20}%;background:${cols[st.nivel]}"></i></span><b>${st.label}</b>` +
+    (psk ? ` · descoberta por dicionário offline (WPA2, 1 milhão de tentativas/s): <b>${tempoQuebra(st.bits, 1e6)}</b>` : '') +
+    (st.motivo ? `<br><span class="hint">${esc(st.motivo)}</span>` : '') +
+    (inval ? '<div class="msg err">Senha inválida: WPA2/WPA3-Personal exigem de 8 a 63 caracteres. O equipamento não aceitaria esta configuração.</div>' : '');
+}
+
+function ip2n(t) { const p = String(t).trim().split('.'); if (p.length !== 4) return null; let n = 0; for (const x of p) { if (!/^\d{1,3}$/.test(x) || +x > 255) return null; n = n * 256 + (+x); } return n; }
+function n2ip(n) { return [24, 16, 8, 0].map(s => Math.floor(n / Math.pow(2, s)) % 256).join('.'); }
+function lanCheck(lan) {
+  const err = [], warn = [];
+  const ip = ip2n(lan.ip), pre = +lan.prefixo;
+  if (ip == null) err.push('O IP do roteador é inválido.');
+  if (!(pre >= 8 && pre <= 30)) err.push('A máscara é inválida.');
+  if (err.length) return {err, warn};
+  const size = Math.pow(2, 32 - pre), net = Math.floor(ip / size) * size, bc = net + size - 1;
+  if (ip === net || ip === bc) err.push('O IP do roteador não pode ser o endereço de rede nem o de broadcast.');
+  let pool = 0;
+  if (lan.dhcp) {
+    const ini = ip2n(lan.ini), fim = ip2n(lan.fim);
+    if (ini == null || fim == null) err.push('O início ou o fim da faixa DHCP é inválido.');
+    else {
+      if (ini < net || ini > bc || fim < net || fim > bc) err.push(`A faixa DHCP precisa estar dentro da rede ${n2ip(net)}/${pre}.`);
+      if (ini > fim) err.push('O início da faixa DHCP é maior que o fim.');
+      if (ip >= ini && ip <= fim) err.push('O IP do roteador está dentro da faixa DHCP: um cliente pode receber o mesmo endereço (conflito de IP).');
+      if (ini === net || fim === bc) err.push('A faixa DHCP inclui o endereço de rede ou o de broadcast.');
+      pool = Math.max(0, fim - ini + 1);
+      if (pool > 0 && pool < 10) warn.push(`A faixa DHCP tem só ${pool} endereços.`);
+    }
+  } else warn.push('DHCP desligado: cada dispositivo precisará de IP configurado manualmente.');
+  return {err, warn, net, bc, pre, pool, hosts:size - 2};
+}
+
+const expoCache = {key:'', v:null};
+function exposicao(e) {
+  const key = e.key + '|' + (e === env ? stateKey() : JSON.stringify(e.aps.map(a => [a.x, a.y, a.tx, a.on, a.tipo])));
+  if (expoCache.key === key) return expoCache.v;
+  const r = e.insideRect, pts = [], off = 2;
+  for (let x = r.x0 - off; x <= r.x1 + off; x += 1) { pts.push([x, r.y0 - off]); pts.push([x, r.y1 + off]); }
+  for (let y = r.y0 - off + 1; y < r.y1 + off; y += 1) { pts.push([r.x0 - off, y]); pts.push([r.x1 + off, y]); }
+  let f70 = 0, f80 = 0, f90 = 0;
+  for (const [x, y] of pts) {
+    let P = -300;
+    for (const b of ['b24', 'b5']) { const ev = evalPoint(e, b, x, y, false); if (ev.s >= 0) P = Math.max(P, ev.rssi); }
+    if (P >= -70) f70++; if (P >= -80) f80++; if (P >= -90) f90++;
+  }
+  const v = {f70:f70 / pts.length, f80:f80 / pts.length, f90:f90 / pts.length};
+  expoCache.key = key; expoCache.v = v;
+  return v;
+}
+function rogueDetections(e) {
+  if (!e.net || !e.net.wids) return [];
+  const out = [];
+  for (const r of e.aps) {
+    if (!r.rogue) continue;
+    let best = null;
+    for (const band of ['b24', 'b5']) {
+      if (!r.on[band]) continue;
+      const G = getGeo(e, band);
+      for (const a of e.aps) {
+        if (!a.own) continue;
+        const p = rx(G, {x:r.x, y:r.y, eirp:r.tx[band] + r.gain}, a.x, a.y, band, e.settings.nExp, 'nao') + a.gain;
+        if (p >= -85 && (!best || p > best.rssi)) best = {rogue:r, by:a, rssi:p, band};
+      }
+    }
+    if (best) out.push(best);
+  }
+  return out;
+}
+const mainSSID = n => n.ssids.find(x => !x.convidados) || n.ssids[0];
+
+function audit(e) {
+  const n = e.net, corp = n.modo === 'corporativo', C = [];
+  const add = (cat, titulo, status, detalhe, correcao, peso = 2) => C.push({cat, titulo, status, detalhe, correcao, peso});
+  const main = mainSSID(n), guests = n.ssids.filter(x => x.convidados);
+  // --- Criptografia e senhas
+  n.ssids.forEach(x => {
+    const nm = `"${x.nome}"`, cat = 'Criptografia e senhas';
+    if (x.seg === 'aberta') add(cat, `Rede ${nm} aberta`, x.convidados && x.portal && x.isolamento ? 'alerta' : 'falha', 'Qualquer pessoa no alcance se conecta, e o tráfego não é cifrado: quem estiver por perto consegue lê-lo.', x.convidados ? 'Para visitantes, use Enhanced Open (OWE) ou WPA2/WPA3 com senha, sempre com isolamento.' : 'Use WPA2-AES ou, melhor, WPA3.', 3);
+    else if (x.seg === 'wep') add(cat, `Rede ${nm} com WEP`, 'falha', 'O WEP (1997) é quebrado em minutos com ferramentas gratuitas.', 'Use WPA2-AES ou WPA3.', 3);
+    else if (x.seg === 'wpa_tkip') add(cat, `Rede ${nm} com WPA/TKIP`, 'falha', 'O TKIP é obsoleto, tem vulnerabilidades conhecidas e limita a velocidade a 54 Mbps.', 'Use WPA2-AES ou WPA3.', 3);
+    else if (x.seg === 'owe') add(cat, `Rede ${nm} com Enhanced Open`, x.convidados ? 'ok' : 'alerta', 'O tráfego é cifrado, mas qualquer um pode entrar (não há autenticação).', x.convidados ? '' : 'Na rede principal, use WPA2/WPA3 com senha ou 802.1X.', 2);
+    else add(cat, `Criptografia de ${nm}: ${SEG[x.seg].nome}`, 'ok', x.seg === 'wpa2' ? 'AES-CCMP. Prefira WPA3 quando todos os dispositivos suportarem.' : 'Criptografia atual e recomendada.', '', 3);
+    if (SEG[x.seg].psk) {
+      const st = pwStrength(x.senha, x.nome), L = String(x.senha || '').length;
+      const offline = ['wep', 'wpa_tkip', 'wpa2', 'wpa2wpa3'].includes(x.seg);
+      if (L < 8 || L > 63) add(cat, `Senha de ${nm} inválida`, 'falha', 'WPA2/WPA3-Personal exigem de 8 a 63 caracteres.', 'Defina uma senha válida.', 3);
+      else add(cat, `Senha de ${nm}: ${st.label}`, st.nivel <= 1 ? 'falha' : st.nivel === 2 ? 'alerta' : 'ok',
+        (offline ? `Um atacante que captura o handshake testa senhas no próprio computador. Tempo estimado: ${tempoQuebra(st.bits, 1e6)}.` : 'O WPA3 (SAE) impede o ataque offline, mas uma senha fraca ainda pode ser adivinhada ou vazar.') + (st.motivo ? ` (${st.motivo})` : ''),
+        'Use 12 ou mais caracteres aleatórios, ou uma frase longa, sem dados pessoais.', 3);
+    }
+  });
+  if (corp) {
+    if (!SEG[main.seg].ent) add('Autenticação', 'Rede corporativa com senha compartilhada', 'falha', 'Todos os funcionários (e ex-funcionários) usam a mesma chave. Não há como revogar o acesso de uma pessoa nem saber quem fez o quê.', 'Use WPA2/WPA3-Enterprise (802.1X) com servidor RADIUS e credenciais individuais.', 3);
+    else if (!String(n.radius || '').trim()) add('Autenticação', 'Servidor RADIUS não configurado', 'falha', 'O 802.1X precisa de um servidor de autenticação (RADIUS); sem ele, ninguém se conecta.', 'Informe o IP do servidor RADIUS em SSIDs e VLANs.', 3);
+    else add('Autenticação', 'Autenticação individual (802.1X)', 'ok', `Credenciais individuais validadas pelo RADIUS ${esc(n.radius)}.`, '', 3);
+  }
+  // --- Segmentação
+  if (!guests.length) add('Segmentação', corp ? 'Sem rede de visitantes separada' : 'Sem rede de convidados', corp ? 'falha' : 'alerta', 'Visitantes e dispositivos IoT usam a mesma rede dos computadores e podem acessá-los.', corp ? 'Crie um SSID de visitantes isolado, em VLAN própria.' : 'Ative a rede de convidados com isolamento.', corp ? 3 : 1);
+  guests.forEach(g => {
+    if (!g.isolamento) add('Segmentação', `Isolamento desligado em "${g.nome}"`, 'falha', 'Convidados conseguem acessar a rede interna e uns aos outros.', 'Ative o isolamento de clientes (AP isolation).', 2);
+    else if (corp && +g.vlan === +main.vlan) add('Segmentação', `"${g.nome}" na mesma VLAN da rede corporativa`, 'falha', 'Sem separação em VLANs, o tráfego dos visitantes chega à rede interna.', 'Coloque os visitantes em VLAN própria, com acesso só à internet.', 2);
+    else add('Segmentação', `Rede de convidados "${g.nome}" isolada`, 'ok', corp ? `VLAN ${g.vlan}, separada da VLAN ${main.vlan}.` : 'Convidados só acessam a internet.', '', corp ? 3 : 2);
+  });
+  if (corp) {
+    if (n.ssids.some(x => +x.vlan === +n.vlanGerencia)) add('Segmentação', 'Gerência dos APs na mesma VLAN dos usuários', 'alerta', 'Usuários conseguem alcançar a interface de administração dos APs e da controladora.', 'Use uma VLAN exclusiva de gerência.', 2);
+    else add('Segmentação', 'VLAN de gerência separada', 'ok', `Gerência na VLAN ${n.vlanGerencia}.`, '', 2);
+    if (n.ssids.length > 4) add('Rádio', `${n.ssids.length} SSIDs anunciados`, 'alerta', 'Cada SSID envia cerca de 10 beacons por segundo em cada AP e canal. Com muitos SSIDs, parte do tempo de antena é gasta só anunciando redes.', 'Use no máximo 3 ou 4 SSIDs; separe grupos por VLAN dinâmica (802.1X).', 1);
+  }
+  // --- Acesso administrativo
+  const cat = 'Acesso administrativo';
+  if (isDefaultAdmin(n.admin.senha)) add(cat, 'Senha de administração padrão', 'falha', 'Quem entrar na rede (ou ler a etiqueta do equipamento) altera toda a configuração, por exemplo o DNS, e redireciona os usuários para sites falsos.', 'Troque a senha de administração por uma senha forte.', 3);
+  else { const st = pwStrength(n.admin.senha); add(cat, `Senha de administração: ${st.label}`, st.nivel <= 1 ? 'alerta' : 'ok', st.nivel <= 1 ? 'Senha alterada, mas fácil de adivinhar.' : 'Senha de administração alterada e forte.', 'Use uma senha longa e única.', 3); }
+  if (!n.firmwareOk) add(cat, `Firmware desatualizado (${n.fwVer})`, 'falha', 'Versões antigas têm vulnerabilidades públicas que qualquer pessoa pode explorar.', `Atualize para a versão ${n.fwAtual}.`, 3);
+  else add(cat, `Firmware atualizado (${n.fwVer})`, 'ok', '', '', 3);
+  if (n.admin.remoto) add(cat, 'Gerenciamento remoto pela internet ativo', isDefaultAdmin(n.admin.senha) ? 'falha' : 'alerta', 'A interface de administração fica exposta para qualquer pessoa na internet.', 'Desative; se precisar administrar a distância, use VPN.', 2);
+  else add(cat, 'Gerenciamento remoto desativado', 'ok', '', '', 2);
+  if (!n.admin.https) add(cat, 'Administração sem HTTPS', 'alerta', 'A senha do administrador trafega sem cifra pela rede.', 'Ative o acesso HTTPS à interface.', 1);
+  else add(cat, 'Administração por HTTPS', 'ok', '', '', 1);
+  if (!corp) {
+    if (n.wps) add('Rádio', 'WPS ativo', 'falha', 'O PIN de 8 dígitos do WPS cai em minutos (Pixie Dust) ou horas (força bruta) e revela a senha, por mais forte que ela seja.', 'Desative o WPS.', 3);
+    else add('Rádio', 'WPS desativado', 'ok', '', '', 3);
+    if (n.admin.upnp) add(cat, 'UPnP ativo', 'alerta', 'Programas, inclusive maliciosos, abrem portas no roteador sem pedir permissão.', 'Desative o UPnP se não for necessário.', 1);
+    else add(cat, 'UPnP desativado', 'ok', '', '', 1);
+    if (/^(WIFI|NET|TP-?LINK|D-?LINK|ROUTER|NETLAB|LIVE|VIVO|CLARO|OI|TIM)[_ -]?[0-9A-F]{4,}$/i.test(main.nome)) add('Criptografia e senhas', 'Nome de rede (SSID) de fábrica', 'alerta', 'O nome padrão revela o fabricante e sugere que o resto da configuração (inclusive senhas) também está no padrão.', 'Use um nome neutro, sem nome de pessoas nem endereço.', 1);
+  }
+  // --- Rádio
+  if (n.pmf === 'desligado') add('Rádio', 'PMF (802.11w) desligado', 'alerta', 'O atacante envia quadros falsos de desautenticação, derruba os clientes e força a reconexão (para capturar o handshake ou atraí-los a um AP falso).', 'Ative o PMF; ele é obrigatório com WPA3.', 2);
+  else add('Rádio', `PMF ${n.pmf}`, 'ok', '', '', 2);
+  if (n.ssids.some(x => x.oculto)) add('Rádio', 'SSID oculto não é medida de segurança', 'info', 'O nome continua aparecendo nos pedidos de conexão dos dispositivos e é descoberto em segundos. Além disso, atrapalha os clientes.', 'Mantenha visível e use criptografia forte.', 0);
+  if (n.filtroMAC) add('Rádio', 'Filtro MAC não é medida de segurança', 'info', 'Os endereços MAC trafegam abertos e podem ser copiados (MAC spoofing).', 'Use WPA2/WPA3 ou 802.1X.', 0);
+  if (corp) {
+    const rog = e.aps.filter(a => a.rogue), det = rogueDetections(e);
+    if (!n.wids) add('Rádio', 'Detecção de APs não autorizados (WIDS) desligada', 'alerta', 'Sem o WIDS, ninguém fica sabendo se alguém instalar um AP pirata na rede ou imitar o SSID da empresa.', 'Ative o WIDS na controladora.', 2);
+    else if (det.length) det.forEach(d => add('Rádio', `AP não autorizado detectado perto de ${d.by.nome}`, 'falha', `O WIDS ouviu um AP pirata anunciando "${esc(d.rogue.ssidR)}" (${fmt(d.rssi)} dBm). Ele pode ser uma porta dos fundos para a rede interna ou um AP falso (evil twin).`, 'Localize-o fisicamente e remova-o (Segurança do ar → Remover).', 3));
+    else if (rog.length) add('Rádio', 'WIDS ativo, mas um AP pirata está fora do alcance dos APs', 'alerta', 'Nenhum AP da empresa ouve o AP não autorizado.', 'Revise a cobertura ou faça uma inspeção física.', 2);
+    else add('Rádio', 'WIDS ativo, sem APs não autorizados', 'ok', '', '', 2);
+  }
+  // --- Exposição externa (física das ondas)
+  const ex = exposicao(e);
+  add('Exposição física', `Sinal ≥ −70 dBm em ${fmt(ex.f70 * 100)}% do entorno`, ex.f70 > 0.5 ? 'alerta' : 'ok', `A 2 m das paredes externas, ${fmt(ex.f80 * 100)}% dos pontos recebem ≥ −80 dBm e ${fmt(ex.f90 * 100)}% recebem ≥ −90 dBm. É dali que um atacante na rua trabalha.`, 'Afaste os APs das paredes externas e reduza a potência; veja a vista Exposição.', 1);
+  // --- Instalação
+  const roots = e.aps.filter(a => a.own && a.tipo === 'roteador');
+  if (!corp && roots.length > 1) add('Instalação', 'Dois roteadores na mesma rede', 'falha', 'Dois servidores DHCP e dupla NAT: clientes recebem endereços de redes diferentes, o roaming falha e serviços como jogos e câmeras param de funcionar.', 'Coloque o segundo equipamento em modo AP (ponte), com DHCP desligado.', 2);
+  if (corp && roots.length) add('Instalação', 'Roteador doméstico na rede corporativa', 'alerta', 'Equipamento sem gerenciamento centralizado, VLANs ou 802.1X.', 'Troque por AP gerenciado pela controladora.', 1);
+  e.aps.filter(a => a.own && a._up && !((a._up.b24 && a._up.b24.rate) || (a._up.b5 && a._up.b5.rate))).forEach(a =>
+    add('Instalação', `${a.nome} (${TIPOS[a.tipo].curto.toLowerCase()}) sem conexão com o AP principal`, 'falha', 'Ele foi instalado onde o sinal do AP principal não chega.', 'Aproxime-o do AP principal: ele deve ficar onde ainda há sinal bom (≥ −65 dBm).', 2));
+  if (!corp) {
+    const lc = lanCheck(n.lan);
+    if (lc.err.length) add('Instalação', 'LAN/DHCP com erro', 'falha', lc.err.join(' '), 'Corrija em LAN e DHCP.', 2);
+    else if (lc.warn.length) add('Instalação', 'LAN/DHCP com observações', 'alerta', lc.warn.join(' '), '', 2);
+    else add('Instalação', `LAN ${n2ip(lc.net)}/${lc.pre} com DHCP de ${lc.pool} endereços`, 'ok', '', '', 2);
+  }
+  let tot = 0, got = 0, falhas = 0, alertas = 0;
+  C.forEach(c => { if (c.status === 'info') return; tot += c.peso; if (c.status === 'ok') got += c.peso; if (c.status === 'alerta') { got += c.peso / 2; alertas++; } if (c.status === 'falha') falhas++; });
+  return {checks:C, score:Math.round(100 * got / Math.max(tot, 1)), falhas, alertas};
+}
+
+function atkEval(e) {
+  const a = e.atk, g = a.dir ? 15 : 0, r = {};
+  let best = -300;
+  for (const b of ['b24', 'b5']) { const ev = evalPoint(e, b, a.x, a.y, false); r[b] = ev.s >= 0 ? ev.rssi + g : -300; best = Math.max(best, r[b]); }
+  return {r, best, nivel:best >= -70 ? 3 : best >= -80 ? 2 : best >= -90 ? 1 : 0};
+}
+const NIVEL_ATK = ['fora de alcance', 'só detecta a rede', 'captura o handshake e desautentica clientes', 'conecta e faz ataques ativos'];
+function attacks(e) {
+  const n = e.net, A = atkEval(e), L = A.nivel, corp = n.modo === 'corporativo', rows = [];
+  const add = (nome, st, det, def) => rows.push({nome, st, det, def});
+  const main = mainSSID(n), seg = main.seg, pw = pwStrength(main.senha, main.nome);
+  const offline = ['wep', 'wpa_tkip', 'wpa2', 'wpa2wpa3'].includes(seg);
+  add('Descobrir a rede', L >= 1 ? 'pos' : 'blo', L >= 1 ? `O sinal chega a ${fmt(A.best)} dBm onde está o atacante${main.oculto ? '. O SSID oculto não impede a descoberta' : ''}.` : 'O sinal não chega até o atacante.', 'Reduzir a potência e a exposição externa.');
+  add('Ler o tráfego da rede (escuta)', L < 2 ? 'blo' : (seg === 'aberta' || seg === 'wep') ? 'pos' : 'blo', seg === 'aberta' ? 'Rede aberta: o que não usa HTTPS é lido em texto claro.' : seg === 'wep' ? 'A chave WEP é recuperada em minutos e o tráfego, decifrado.' : 'O tráfego é cifrado.', 'WPA2-AES ou WPA3.');
+  if (offline && seg !== 'wep') add('Descobrir a senha por dicionário (offline)', L < 2 ? 'blo' : pw.nivel <= 1 ? 'pos' : pw.nivel === 2 ? 'dif' : 'blo', `Captura o handshake de um cliente e testa senhas no próprio computador. Senha ${pw.label}: ${tempoQuebra(pw.bits, 1e6)}.${seg === 'wpa2wpa3' ? ' No modo de transição, clientes WPA2 continuam expostos.' : ''}`, 'Senha longa e aleatória; WPA3.');
+  else if (seg === 'wpa3') add('Descobrir a senha por dicionário (offline)', 'blo', 'O SAE (WPA3) impede o ataque offline: cada tentativa exige falar com o AP.', 'Manter senha forte.');
+  else if (SEG[seg].ent) add('Descobrir a senha da rede', 'blo', 'Não há senha compartilhada; cada usuário tem a sua.', '—');
+  if (!corp) add('Ataque ao PIN do WPS', !n.wps ? 'blo' : L >= 3 ? 'pos' : L >= 1 ? 'dif' : 'blo', n.wps ? 'WPS ativo: o PIN cai em minutos (Pixie Dust) ou horas e revela a senha.' + (L >= 3 ? '' : ' O atacante precisa de sinal ≥ −70 dBm.') : 'WPS desativado.', 'Desativar o WPS.');
+  add('Derrubar clientes (desautenticação)', L < 2 || n.pmf === 'obrigatorio' ? 'blo' : n.pmf === 'opcional' ? 'dif' : 'pos', n.pmf === 'obrigatorio' ? 'PMF obrigatório: quadros falsos são descartados.' : 'Quadros falsos de desautenticação derrubam os clientes, que reconectam e expõem o handshake.', 'Ativar PMF (802.11w).');
+  add('AP falso com o mesmo nome (evil twin)', L < 1 ? 'blo' : (seg === 'aberta' || seg === 'owe') ? 'pos' : 'dif', (seg === 'aberta' || seg === 'owe') ? 'Os clientes não têm como distinguir o AP falso do verdadeiro.' : SEG[seg].ent ? 'Exige que o cliente aceite um certificado falso: configure a validação do certificado do RADIUS nos dispositivos.' : 'O atacante precisa da senha para imitar a rede; com senha fraca, isso fica fácil.' + (corp && n.wids ? ' O WIDS alerta sobre SSIDs falsificados.' : ''), 'Senha forte ou 802.1X, PMF e WIDS.');
+  const entra = seg === 'aberta' || seg === 'wep' || (offline && pw.nivel <= 1) || (!corp && n.wps);
+  const adminFraca = isDefaultAdmin(n.admin.senha) || pwStrength(n.admin.senha).nivel <= 1;
+  add('Assumir o controle do roteador/APs', (n.admin.remoto && adminFraca) || (entra && L >= 2 && adminFraca) ? 'pos' : adminFraca ? 'dif' : 'blo', n.admin.remoto && adminFraca ? 'Gerenciamento remoto ativo com senha fraca: o ataque vem pela internet, sem precisar estar perto.' : adminFraca ? 'Com a senha de administração padrão, basta entrar na rede para alterar DNS, senhas e firmware.' : 'Senha de administração forte.', 'Senha forte, HTTPS e gerenciamento remoto desligado.');
+  add('Explorar falhas do firmware', n.firmwareOk ? 'blo' : (n.admin.remoto || (entra && L >= 2)) ? 'pos' : 'dif', n.firmwareOk ? 'Firmware atualizado.' : `A versão ${n.fwVer} tem falhas públicas.`, 'Atualizar o firmware.');
+  const g = n.ssids.filter(x => x.convidados);
+  const iso = g.length && g.every(x => x.isolamento && (!corp || +x.vlan !== +main.vlan));
+  add('Visitante acessa os dispositivos internos', iso ? 'blo' : 'pos', !g.length ? 'Não há rede de convidados: visitantes usam a rede principal.' : iso ? 'Convidados isolados.' : 'A rede de convidados não está isolada.', 'Rede de convidados isolada (e em VLAN própria).');
+  if (n.filtroMAC) add('Burlar o filtro MAC', L >= 2 ? 'pos' : 'blo', 'O atacante copia o MAC de um cliente autorizado (MAC spoofing).', 'O filtro MAC não substitui a criptografia.');
+  if (corp) {
+    add('Ex-funcionário continua acessando', SEG[seg].ent ? 'blo' : 'pos', SEG[seg].ent ? 'A credencial individual é revogada no desligamento.' : 'A senha é a mesma para todos; trocá-la exige reconfigurar todos os dispositivos.', 'WPA2/WPA3-Enterprise (802.1X).');
+    const rog = e.aps.filter(x => x.rogue);
+    add('Porta dos fundos por AP não autorizado', !rog.length ? 'blo' : n.wids && rogueDetections(e).length ? 'dif' : 'pos', !rog.length ? 'Nenhum AP não autorizado.' : n.wids ? 'O WIDS detectou o AP; falta removê-lo fisicamente.' : 'Um AP ligado à rede sem autorização abre uma entrada sem senha para a rede interna, e ninguém sabe.', 'WIDS, 802.1X nas portas do switch e inspeção física.');
+  }
+  return {A, rows};
+}
+const ST_NOME = {ok:'OK', alerta:'Alerta', falha:'Falha', info:'Mito', pos:'Possível', dif:'Dificultado', blo:'Bloqueado'};
+const sev = st => `<span class="sev ${st}">${ST_NOME[st]}</span>`;
+const scoreCol = v => v >= 80 ? '#2a9d8f' : v >= 50 ? '#e0a100' : '#d7443a';
+
+function updateSec() {
+  if (!env.net) return;
+  const A = audit(env);
+  const top = A.checks.filter(c => c.status === 'falha').slice(0, 3);
+  $('#secBody').innerHTML = `<div class="score"><span class="num" style="color:${scoreCol(A.score)}">${A.score}</span><div class="bar"><i style="width:${A.score}%;background:${scoreCol(A.score)}"></i></div></div>
+    <div class="hint">${A.falhas} falha(s) · ${A.alertas} alerta(s) · ${env.net.modo === 'corporativo' ? 'controladora WLAN' : 'roteador doméstico'}</div>
+    ${top.length ? `<ul class="issues">${top.map(c => `<li>${esc(c.titulo)}</li>`).join('')}</ul>` : '<div class="msg ok">Nenhuma falha encontrada.</div>'}`;
+}
+function updateAtk() {
+  if (!env.atk || env.settings.view !== 'expo') return;
+  const {A, rows} = attacks(env);
+  const pos = rows.filter(r => r.st === 'pos');
+  $('#atkBody').innerHTML = `<table class="kv"><tr><td>Sinal recebido 2,4 GHz</td><td>${A.r.b24 > -200 ? fmt(A.r.b24) + ' dBm' : '—'}</td></tr>
+    <tr><td>Sinal recebido 5 GHz</td><td>${A.r.b5 > -200 ? fmt(A.r.b5) + ' dBm' : '—'}</td></tr>
+    <tr class="tot"><td colspan="2" style="text-align:left">${NIVEL_ATK[A.nivel]}</td></tr></table>
+    ${pos.length ? `<div class="msg err"><b>${pos.length} ataque(s) possível(is):</b> ${pos.map(r => r.nome.toLowerCase()).join('; ')}.</div>` : '<div class="msg ok">Nenhum ataque possível deste ponto com a configuração atual.</div>'}`;
+}
+
+/* ---------- Modal: interface de configuração e auditoria ---------- */
+let cfgPage = 'status';
+function openModal(title) { $('#mTitle').textContent = title; $('#modal').classList.add('on'); }
+function closeModal() { $('#modal').classList.remove('on'); updatePanels(); requestDraw(); }
+$('#mClose').onclick = closeModal;
+$('#modal').addEventListener('mousedown', ev => { if (ev.target.id === 'modal') closeModal(); });
+const getP = (o, p) => p.split('.').reduce((x, k) => x == null ? x : x[k], o);
+function setP(o, p, v) { const k = p.split('.'), last = k.pop(); k.reduce((x, y) => x[y], o)[last] = v; }
+const F_ = {
+  txt:(p, ph = '', w = 220, live = false, extra = '') => `<input type="text" data-p="${p}" ${live ? 'data-live="1"' : ''} value="${esc(getP(env.net, p))}" placeholder="${esc(ph)}" style="width:${w}px" ${extra}>`,
+  num:(p, min, max, w = 80) => `<input type="number" data-p="${p}" data-t="num" min="${min}" max="${max}" value="${getP(env.net, p)}" style="width:${w}px">`,
+  chk:(p, label) => `<label style="color:var(--ink)"><input type="checkbox" data-p="${p}" ${getP(env.net, p) ? 'checked' : ''}> ${label}</label>`,
+  sel:(p, opts, num) => `<select data-p="${p}" ${num ? 'data-t="num"' : ''}>${opts.map(([v, t]) => `<option value="${v}" ${String(getP(env.net, p)) === String(v) ? 'selected' : ''}>${t}</option>`).join('')}</select>`,
+};
+const fld = (label, ctl, help = '') => `<div class="fld"><label>${label}</label><div>${ctl}</div>${help ? `<div class="help">${help}</div>` : ''}</div>`;
+const msgs = (A, cats) => A.checks.filter(c => cats.includes(c.cat) && (c.status === 'falha' || c.status === 'alerta' || c.status === 'info'))
+  .map(c => `<div class="msg ${c.status === 'falha' ? 'err' : c.status === 'info' ? 'inf' : 'warn'}"><b>${esc(c.titulo)}.</b> ${c.detalhe} ${c.correcao ? `<i>${c.correcao}</i>` : ''}</div>`).join('');
+function cfgPages() {
+  return env.net.modo === 'corporativo'
+    ? [['status', 'Painel'], ['ssids', 'SSIDs e VLANs'], ['ar', 'Segurança do ar'], ['radio', 'Rádios dos APs'], ['ger', 'Gerência']]
+    : [['status', 'Status'], ['wifi', 'Rede sem fio'], ['seg', 'Segurança Wi-Fi'], ['conv', 'Rede de convidados'], ['lan', 'LAN e DHCP'], ['adm', 'Administração']];
+}
+function apRows(list) {
+  const s = env.settings;
+  return `<table class="at"><tr><th>Equipamento</th><th>Modo</th><th>2,4 GHz: canal · potência</th><th>5 GHz: canal · potência</th></tr>` + list.map(a => {
+    const cell = b => `<label><input type="checkbox" data-ap="${a.id}" data-p="on.${b}" ${a.on[b] ? 'checked' : ''}></label> ` +
+      (a.tipo === 'repetidor' ? `<span class="hint">ch ${chOf(a, b)} (segue o principal)</span>` : `<select data-ap="${a.id}" data-p="ch.${b}" data-t="num">${chOptions(b, a.ch[b])}</select>`) +
+      ` <input type="number" data-ap="${a.id}" data-p="tx.${b}" data-t="num" min="0" max="23" value="${a.tx[b]}" style="width:56px"> dBm`;
+    return `<tr><td><b>${esc(a.nome)}</b></td><td><select data-ap="${a.id}" data-p="tipo">${Object.keys(TIPOS).map(k => `<option value="${k}" ${k === a.tipo ? 'selected' : ''}>${TIPOS[k].curto}</option>`).join('')}</select></td><td>${cell('b24')}</td><td>${cell('b5')}</td></tr>`;
+  }).join('') + '</table>';
+}
+function pageHTML(pg) {
+  const n = env.net, A = audit(env), main = mainSSID(n), mi = n.ssids.indexOf(main), corp = n.modo === 'corporativo';
+  const segOpts = (corp ? Object.keys(SEG) : SEG_DOM).map(k => [k, SEG[k].nome]);
+  const own = env.aps.filter(a => a.own);
+  if (pg === 'status') {
+    const det = rogueDetections(env);
+    return `<h4>${corp ? 'Painel da controladora' : 'Status do roteador'}</h4>
+      <div class="score"><span class="num" style="color:${scoreCol(A.score)}">${A.score}</span><div class="bar"><i style="width:${A.score}%;background:${scoreCol(A.score)}"></i></div><span class="hint">nota de segurança · ${A.falhas} falha(s), ${A.alertas} alerta(s)</span></div>
+      <table class="kv">
+        <tr><td>Modelo</td><td>${esc(n.modelo)}</td></tr>
+        <tr><td>Firmware</td><td>${n.fwVer} ${n.firmwareOk ? '(atualizado)' : `<span class="sev falha">nova versão ${n.fwAtual} disponível</span>`}</td></tr>
+        <tr><td>Redes (SSIDs)</td><td>${n.ssids.map(x => `${esc(x.nome)} · ${SEG[x.seg].nome}${corp ? ' · VLAN ' + x.vlan : ''}`).join('<br>')}</td></tr>
+        ${corp ? `<tr><td>APs gerenciados</td><td>${own.length} online</td></tr>` : `<tr><td>LAN</td><td>${esc(n.lan.ip)}/${n.lan.prefixo} · DHCP ${n.lan.dhcp ? esc(n.lan.ini) + ' – ' + esc(n.lan.fim) : 'desligado'}</td></tr>`}
+        <tr><td>Equipamentos</td><td>${own.map(a => `${esc(a.nome)} (${TIPOS[a.tipo].curto})`).join(', ')}</td></tr>
+        ${corp ? `<tr><td>Alertas do WIDS</td><td>${!n.wids ? 'WIDS desligado' : det.length ? det.map(d => `<span class="sev falha">AP não autorizado</span> ouvido por ${esc(d.by.nome)} (${fmt(d.rssi)} dBm)`).join('<br>') : 'nenhum'}</td></tr>` : ''}
+      </table>
+      ${n.firmwareOk ? '' : '<div class="row"><button class="btn primary" data-act="fw">Atualizar firmware</button></div>'}
+      <p class="hint">Interface simulada para treino. Os menus reais variam de fabricante para fabricante, mas os itens a configurar são os mesmos.</p>`;
+  }
+  if (pg === 'wifi') return `<h4>Rede sem fio</h4>
+      ${fld('Nome da rede (SSID)', F_.txt(`ssids.${mi}.nome`, 'ex.: Casa_Lab3'), 'Evite nome de pessoas, endereço ou o nome de fábrica.')}
+      ${fld('Ocultar SSID', F_.chk(`ssids.${mi}.oculto`, 'não anunciar o nome'), 'Não aumenta a segurança: o nome aparece nos pedidos de conexão dos dispositivos.')}
+      ${fld('Band steering', F_.chk('bandSteering', 'mesmo nome nas duas bandas'), 'O roteador incentiva os clientes compatíveis a usar 5 GHz.')}
+      ${fld('Largura em 5 GHz', `<select data-st="width5" data-t="num">${[20, 40, 80].map(w => `<option value="${w}" ${env.settings.width5 === w ? 'selected' : ''}>${w} MHz</option>`).join('')}</select>`, 'Em 2,4 GHz, use 20 MHz e os canais 1, 6 ou 11.')}
+      <h4 style="margin-top:14px">Rádios dos equipamentos</h4>${apRows(own)}
+      <p class="hint">Mudanças aqui aparecem no mapa de calor. Repetidores usam obrigatoriamente o canal do AP principal.</p>`;
+  if (pg === 'seg') return `<h4>Segurança Wi-Fi</h4>
+      ${fld('Modo de segurança', F_.sel(`ssids.${mi}.seg`, segOpts), 'Recomendado: WPA3-Personal ou WPA2/WPA3 (transição) se houver dispositivos antigos.')}
+      ${SEG[main.seg].psk ? fld('Senha da rede', F_.txt(`ssids.${mi}.senha`, '8 a 63 caracteres', 260, true), `<span data-meter="ssids.${mi}.senha" data-ssid="ssids.${mi}.nome">${meterHTML(main.senha, main.nome, true)}</span>`) : ''}
+      ${fld('PMF (802.11w)', F_.sel('pmf', [['desligado', 'Desligado'], ['opcional', 'Opcional'], ['obrigatorio', 'Obrigatório']]), 'Protege os quadros de gerenciamento contra desautenticação forjada. Obrigatório no WPA3.')}
+      ${fld('WPS', F_.chk('wps', 'ativar WPS (botão/PIN)'), 'Prático, mas o PIN pode ser quebrado. Recomendação: desligado.')}
+      ${fld('Filtro de endereços MAC', F_.chk('filtroMAC', 'permitir só MACs cadastrados'), 'Dá trabalho e não protege: o MAC pode ser falsificado.')}
+      ${msgs(A, ['Criptografia e senhas', 'Rádio'])}`;
+  if (pg === 'conv') {
+    const gi = n.ssids.findIndex(x => x.convidados), g = n.ssids[gi];
+    return `<h4>Rede de convidados</h4>
+      ${fld('Rede de convidados', `<label style="color:var(--ink)"><input type="checkbox" data-act="guest" ${g ? 'checked' : ''}> ativar</label>`, 'Uma rede separada para visitantes e dispositivos IoT (TV, câmeras, lâmpadas).')}
+      ${g ? fld('Nome', F_.txt(`ssids.${gi}.nome`)) + fld('Segurança', F_.sel(`ssids.${gi}.seg`, segOpts)) +
+        (SEG[g.seg].psk ? fld('Senha', F_.txt(`ssids.${gi}.senha`, '', 220, true), `<span data-meter="ssids.${gi}.senha" data-ssid="ssids.${gi}.nome">${meterHTML(g.senha, g.nome, true)}</span>`) : '') +
+        fld('Isolamento', F_.chk(`ssids.${gi}.isolamento`, 'convidados só acessam a internet'), 'Impede o acesso aos computadores, à impressora e à interface do roteador.') : ''}
+      ${msgs(A, ['Segmentação'])}`;
+  }
+  if (pg === 'lan') {
+    const lc = lanCheck(n.lan);
+    return `<h4>LAN e DHCP</h4>
+      ${fld('IP do roteador (gateway)', F_.txt('lan.ip', '192.168.0.1', 150))}
+      ${fld('Máscara', F_.sel('lan.prefixo', [16, 20, 22, 23, 24, 25, 26, 27, 28].map(p => [p, `/${p} (${n2ip(p ? (Math.pow(2, 32) - Math.pow(2, 32 - p)) : 0)})`]), true))}
+      ${fld('Servidor DHCP', F_.chk('lan.dhcp', 'distribuir endereços automaticamente'))}
+      ${n.lan.dhcp ? fld('Faixa DHCP', F_.txt('lan.ini', '', 130) + ' até ' + F_.txt('lan.fim', '', 130)) : ''}
+      ${lc.net != null && !lc.err.length ? `<div class="msg ok">Rede ${n2ip(lc.net)}/${lc.pre} · broadcast ${n2ip(lc.bc)} · ${lc.hosts} hosts possíveis${n.lan.dhcp ? ` · ${lc.pool} endereços no DHCP` : ''}.</div>` : ''}
+      ${lc.err.map(t => `<div class="msg err">${t}</div>`).join('')}${lc.warn.map(t => `<div class="msg warn">${t}</div>`).join('')}
+      ${msgs(A, ['Instalação'])}
+      <p class="hint">Um segundo roteador ligado a esta rede deve operar em <b>modo AP</b>: sem DHCP, com IP fixo desta faixa (fora do DHCP) e cabo ligado a uma porta LAN.</p>`;
+  }
+  if (pg === 'adm') return `<h4>Administração</h4>
+      ${fld('Usuário', F_.txt('admin.usuario', '', 150))}
+      ${fld('Senha de administração', F_.txt('admin.senha', '', 220, true), `<span data-meter="admin.senha">${meterHTML(n.admin.senha, '', false)}</span>`)}
+      ${fld('Acesso por HTTPS', F_.chk('admin.https', 'exigir HTTPS na interface'))}
+      ${fld('Gerenciamento remoto', F_.chk('admin.remoto', 'permitir acesso pela internet (WAN)'), 'Expõe a interface para o mundo. Prefira VPN.')}
+      ${fld('UPnP', F_.chk('admin.upnp', 'permitir abertura automática de portas'))}
+      ${fld('Firmware', `${n.fwVer} ${n.firmwareOk ? '<span class="sev ok">atualizado</span>' : `<button class="btn primary" data-act="fw">Atualizar para ${n.fwAtual}</button>`}`)}
+      ${fld('Backup', `<button class="btn" data-act="backup">Salvar configuração</button> <span id="bkMsg" class="hint"></span>`, 'Guarde o backup antes de qualquer mudança grande.')}
+      ${fld('Padrão de fábrica', '<button class="btn danger" data-act="reset">Restaurar padrão de fábrica</button>', 'Volta todas as configurações (senhas, SSID, WPS…) ao estado de fábrica.')}
+      ${msgs(A, ['Acesso administrativo'])}`;
+  // ---- corporativo
+  if (pg === 'ssids') return `<h4>SSIDs e VLANs</h4>
+      <table class="at"><tr><th>SSID</th><th>Segurança</th><th>Senha</th><th>VLAN</th><th>Visitantes</th><th>Isolamento</th><th>Portal</th><th></th></tr>
+      ${n.ssids.map((x, i) => `<tr><td>${F_.txt(`ssids.${i}.nome`, '', 120)}</td><td>${F_.sel(`ssids.${i}.seg`, segOpts)}</td>
+        <td>${SEG[x.seg].psk ? F_.txt(`ssids.${i}.senha`, '', 120, true) + `<div data-meter="ssids.${i}.senha" data-ssid="ssids.${i}.nome" data-short="1" class="hint">${pwStrength(x.senha, x.nome).label}</div>` : SEG[x.seg].ent ? '<span class="hint">credencial individual</span>' : '—'}</td>
+        <td>${F_.num(`ssids.${i}.vlan`, 1, 4094, 64)}</td><td>${F_.chk(`ssids.${i}.convidados`, '')}</td><td>${F_.chk(`ssids.${i}.isolamento`, '')}</td><td>${F_.chk(`ssids.${i}.portal`, '')}</td>
+        <td>${n.ssids.length > 1 ? `<button class="btn danger" data-act="delssid" data-i="${i}">✕</button>` : ''}</td></tr>`).join('')}
+      </table>
+      <div class="row"><button class="btn" data-act="addssid">+ SSID</button></div>
+      ${n.ssids.some(x => SEG[x.seg].ent) ? fld('Servidor RADIUS (802.1X)', F_.txt('radius', 'ex.: 10.10.99.10', 160)) : ''}
+      <div class="msg inf">Desenho típico: <b>Corporativo</b> (WPA2/WPA3-Enterprise, VLAN 10) · <b>Visitantes</b> (OWE ou WPA2 com senha, VLAN 20, isolamento, portal) · <b>IoT</b> (WPA2, VLAN 30).</div>
+      ${msgs(A, ['Criptografia e senhas', 'Autenticação', 'Segmentação'])}`;
+  if (pg === 'ar') {
+    const det = rogueDetections(env);
+    return `<h4>Segurança do ar</h4>
+      ${fld('PMF (802.11w)', F_.sel('pmf', [['desligado', 'Desligado'], ['opcional', 'Opcional'], ['obrigatorio', 'Obrigatório']]), 'Bloqueia desautenticação forjada.')}
+      ${fld('WIDS', F_.chk('wids', 'detectar APs não autorizados e SSIDs falsificados'), 'Os próprios APs varrem os canais em busca de redes suspeitas.')}
+      ${n.wids ? (det.length ? det.map(d => `<div class="msg err"><b>AP não autorizado</b> anunciando "${esc(d.rogue.ssidR)}" (${SEG[d.rogue.segR].nome}), ouvido por ${esc(d.by.nome)} com ${fmt(d.rssi)} dBm. <button class="btn danger" data-act="rmrogue" data-id="${d.rogue.id}">Localizar e remover</button></div>`).join('') : '<div class="msg ok">Nenhum AP não autorizado detectado.</div>') : ''}
+      ${msgs(A, ['Rádio', 'Exposição física'])}`;
+  }
+  if (pg === 'radio') return `<h4>Rádios dos APs</h4>
+      ${fld('Largura em 5 GHz', `<select data-st="width5" data-t="num">${[20, 40, 80].map(w => `<option value="${w}" ${env.settings.width5 === w ? 'selected' : ''}>${w} MHz</option>`).join('')}</select>`)}
+      <div class="row"><button class="btn primary" data-act="autoch">Planejar canais automaticamente</button></div>
+      ${apRows(own)}`;
+  if (pg === 'ger') return `<h4>Gerência</h4>
+      ${fld('Usuário', F_.txt('admin.usuario', '', 150))}
+      ${fld('Senha de administração', F_.txt('admin.senha', '', 220, true), `<span data-meter="admin.senha">${meterHTML(n.admin.senha, '', false)}</span>`)}
+      ${fld('VLAN de gerência', F_.num('vlanGerencia', 1, 4094), 'Os APs e a controladora são administrados por esta VLAN, separada dos usuários.')}
+      ${fld('Acesso por HTTPS', F_.chk('admin.https', 'exigir HTTPS'))}
+      ${fld('Acesso remoto', F_.chk('admin.remoto', 'permitir administração pela internet'))}
+      ${fld('Firmware', `${n.fwVer} ${n.firmwareOk ? '<span class="sev ok">atualizado</span>' : `<button class="btn primary" data-act="fw">Atualizar todos os APs para ${n.fwAtual}</button>`}`)}
+      ${msgs(A, ['Acesso administrativo'])}`;
+  return '';
+}
+function renderCfg() {
+  const n = env.net, A = audit(env);
+  if (!cfgPages().some(p => p[0] === cfgPage)) cfgPage = 'status';
+  $('#mScore').textContent = `segurança ${A.score}/100`;
+  $('#mBody').innerHTML = `<div class="rui"><nav><div class="brand">${n.modo === 'corporativo' ? 'NetLab WLC' : 'NetLab AC1200'}<small>${esc(env.titulo)}</small></div>${cfgPages().map(([k, t]) => `<button data-pg="${k}" class="${k === cfgPage ? 'on' : ''}">${t}</button>`).join('')}</nav><div class="pg">${pageHTML(cfgPage)}</div></div>`;
+}
+function openCfg() { openModal(env.net.modo === 'corporativo' ? 'Controladora WLAN — interface de configuração (simulada)' : 'Roteador doméstico — interface web (simulada)'); renderCfg(); }
+function cfgInput(ev, commit) {
+  const el = ev.target;
+  if (!el.dataset || (!el.dataset.p && !el.dataset.st)) return;
+  const isText = el.type === 'text' || el.type === 'number';
+  if (!commit && !isText) return;
+  const v = el.type === 'checkbox' ? el.checked : el.dataset.t === 'num' ? +el.value : el.value;
+  if (el.dataset.ap) { const a = env.aps.find(x => String(x.id) === el.dataset.ap); if (a) setP(a, el.dataset.p, v); if (commit) changed(); }
+  else if (el.dataset.st) { env.settings[el.dataset.st] = v; if (commit) changed(); }
+  else setP(env.net, el.dataset.p, v);
+  if (el.dataset.p && /\.seg$/.test(el.dataset.p) && /wpa3/.test(v)) env.net.pmf = 'obrigatorio';
+  if (!commit) {
+    document.querySelectorAll('#mBody [data-meter]').forEach(m => {
+      const pw = getP(env.net, m.dataset.meter), ss = m.dataset.ssid ? getP(env.net, m.dataset.ssid) : '';
+      m.innerHTML = m.dataset.short ? pwStrength(pw, ss).label : meterHTML(pw, ss, !!m.dataset.ssid);
+    });
+    $('#mScore').textContent = `segurança ${audit(env).score}/100`;
+    return;
+  }
+  renderCfg(); updateSec(); requestDraw();
+}
+$('#mBody').addEventListener('input', ev => cfgInput(ev, false));
+$('#mBody').addEventListener('change', ev => { if (ev.target.dataset.act === 'guest') return; cfgInput(ev, true); });
+$('#mBody').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-pg],[data-act]'); if (!b) return;
+  if (b.dataset.pg) { cfgPage = b.dataset.pg; renderCfg(); return; }
+  const n = env.net, act = b.dataset.act;
+  if (act === 'fw') { n.firmwareOk = true; n.fwVer = n.fwAtual; }
+  else if (act === 'backup') { const m = $('#bkMsg'); if (m) m.textContent = 'Backup salvo (simulado): ' + new Date().toLocaleString('pt-BR'); return; }
+  else if (act === 'reset') { env.net = env.net.modo === 'corporativo' ? netCorporativo() : netResidencia(); }
+  else if (act === 'guest') {
+    const gi = n.ssids.findIndex(x => x.convidados);
+    if (gi >= 0) n.ssids.splice(gi, 1);
+    else n.ssids.push({id:Date.now(), nome:mainSSID(n).nome + '_Visitantes', seg:'wpa2', senha:'', oculto:false, isolamento:true, vlan:20, convidados:true, portal:false});
+  }
+  else if (act === 'addssid') { if (n.ssids.length < 8) n.ssids.push({id:Date.now(), nome:'NOVO_SSID', seg:'wpa2', senha:'', oculto:false, isolamento:false, vlan:n.ssids.length * 10 + 10, convidados:false, portal:false}); }
+  else if (act === 'delssid') { n.ssids.splice(+b.dataset.i, 1); }
+  else if (act === 'rmrogue') { env.aps = env.aps.filter(a => String(a.id) !== b.dataset.id); changed(); }
+  else if (act === 'autoch') { autoChannels(env); changed(); }
+  else if (act === 'audit-expo') { closeModal(); env.settings.view = 'expo'; changed(); updatePanels(); return; }
+  else return;
+  renderCfg(); updateSec(); requestDraw();
+});
+function openAudit() {
+  openModal('Auditoria de segurança e ataques possíveis');
+  const A = audit(env), {A:AT, rows} = attacks(env);
+  const cats = [...new Set(A.checks.map(c => c.cat))];
+  $('#mScore').textContent = `segurança ${A.score}/100`;
+  $('#mBody').innerHTML = `<div style="padding:14px 18px">
+    <div class="score"><span class="num" style="color:${scoreCol(A.score)}">${A.score}</span><div class="bar"><i style="width:${A.score}%;background:${scoreCol(A.score)}"></i></div><span class="hint">${A.falhas} falha(s) · ${A.alertas} alerta(s)</span></div>
+    <div class="grid2">
+    <div><h4 style="margin:6px 0">Lista de verificação</h4>
+    <table class="at"><tr><th>Item</th><th>Situação</th></tr>
+      ${cats.map(cat => `<tr><td colspan="2" style="background:#faf9f6"><b>${cat}</b></td></tr>` + A.checks.filter(c => c.cat === cat).map(c => `<tr><td><b>${esc(c.titulo)}</b>${c.detalhe ? `<br><span class="hint">${c.detalhe}</span>` : ''}${c.correcao && c.status !== 'ok' ? `<br><i style="font-size:12px">→ ${c.correcao}</i>` : ''}</td><td>${sev(c.status)}</td></tr>`).join('')).join('')}
+    </table></div>
+    <div><h4 style="margin:6px 0">O que o atacante consegue fazer</h4>
+    <p class="hint" style="margin:0 0 6px">Atacante em (${fmt(env.atk.x, 1)}; ${fmt(env.atk.y, 1)}) m${env.atk.dir ? ', com antena direcional' : ''}: sinal de ${AT.best > -200 ? fmt(AT.best) + ' dBm' : '—'}, ${NIVEL_ATK[AT.nivel]}.</p>
+    <table class="at"><tr><th>Ataque</th><th>Situação</th><th>Defesa</th></tr>
+      ${rows.map(r => `<tr><td><b>${r.nome}</b><br><span class="hint">${r.det}</span></td><td>${sev(r.st)}</td><td style="font-size:12px">${r.def}</td></tr>`).join('')}
+    </table>
+    <div class="row"><button class="btn" data-act="audit-expo">Ver a vista Exposição e mover o atacante</button></div>
+    <p class="hint">Simulação didática. Atacar redes de terceiros é crime (Lei 12.737/2012). No laboratório, teste apenas os equipamentos da própria bancada.</p>
+    </div></div></div>`;
+}
+$('#openCfg').onclick = openCfg;
+$('#openAudit').onclick = openAudit;
+$('#atkDir').onchange = ev => { env.atk.dir = ev.target.checked; updateAtk(); $('#legend').innerHTML = legendHTML(); requestDraw(); };
+$('#apPick').onclick = ev => { const b = ev.target.closest('button'); if (!b) return; ui.apTipo[env.key] = b.dataset.k; updatePanels(); };
+
+/* =====================================================================
+   9b. DISPOSITIVOS WLAN
+   ===================================================================== */
+const DEV_ICON = {
+  roteador:`<svg viewBox="0 0 64 48"><rect x="6" y="22" width="52" height="16" rx="4" fill="#1d70b8"/><line x1="16" y1="22" x2="12" y2="4" stroke="#1d70b8" stroke-width="3" stroke-linecap="round"/><line x1="48" y1="22" x2="52" y2="4" stroke="#1d70b8" stroke-width="3" stroke-linecap="round"/><circle cx="16" cy="30" r="2" fill="#7dd3fc"/><circle cx="23" cy="30" r="2" fill="#7dd3fc"/><circle cx="30" cy="30" r="2" fill="#7dd3fc"/><rect x="38" y="28" width="14" height="4" rx="1" fill="#0b3b63"/></svg>`,
+  comercial:`<svg viewBox="0 0 64 48"><rect x="4" y="14" width="56" height="20" rx="3" fill="#14202b"/>${[0,1,2,3,4,5].map(i=>`<rect x="${9+i*7}" y="20" width="5" height="5" fill="#2a9d8f"/>`).join('')}<rect x="52" y="20" width="4" height="8" fill="#f39237"/></svg>`,
+  ap:`<svg viewBox="0 0 64 48"><ellipse cx="32" cy="26" rx="26" ry="12" fill="#e8eef3" stroke="#14202b" stroke-width="2"/><ellipse cx="32" cy="24" rx="20" ry="8" fill="#fff"/><circle cx="32" cy="24" r="2.5" fill="#2a9d8f"/><path d="M14 12 Q32 2 50 12" stroke="#2a9d8f" stroke-width="2" fill="none"/></svg>`,
+  repetidor:`<svg viewBox="0 0 64 48"><rect x="18" y="6" width="28" height="34" rx="5" fill="#f4a261"/><rect x="24" y="40" width="4" height="6" fill="#555"/><rect x="36" y="40" width="4" height="6" fill="#555"/><path d="M24 20 Q32 12 40 20 M27 24 Q32 19 37 24" stroke="#fff" stroke-width="2.4" fill="none"/></svg>`,
+  mesh:`<svg viewBox="0 0 64 48"><rect x="4" y="12" width="16" height="26" rx="6" fill="#8338ec"/><rect x="24" y="12" width="16" height="26" rx="6" fill="#8338ec"/><rect x="44" y="12" width="16" height="26" rx="6" fill="#8338ec"/><path d="M20 22 H24 M40 22 H44" stroke="#8338ec" stroke-width="2" stroke-dasharray="2 2"/></svg>`,
+  controladora:`<svg viewBox="0 0 64 48"><rect x="6" y="8" width="52" height="12" rx="2" fill="#14202b"/><rect x="6" y="24" width="52" height="12" rx="2" fill="#14202b"/><circle cx="50" cy="14" r="2" fill="#2bb07f"/><circle cx="50" cy="30" r="2" fill="#2bb07f"/><text x="12" y="17" font-size="7" fill="#fff" font-family="sans-serif">WLC</text></svg>`,
+  switchpoe:`<svg viewBox="0 0 64 48"><rect x="2" y="16" width="60" height="16" rx="2" fill="#5f6673"/>${[0,1,2,3,4,5,6,7].map(i=>`<rect x="${6+i*7}" y="20" width="5" height="5" fill="#fff"/><rect x="${6+i*7}" y="26" width="5" height="2" fill="#f4d35e"/>`).join('')}</svg>`,
+  antena:`<svg viewBox="0 0 64 48"><line x1="14" y1="44" x2="14" y2="6" stroke="#14202b" stroke-width="3"/><path d="M6 14 Q14 4 22 14" stroke="#2a9d8f" stroke-width="2" fill="none"/><rect x="36" y="12" width="20" height="24" rx="2" fill="#e8eef3" stroke="#14202b" stroke-width="2"/><path d="M58 18 L63 14 M58 30 L63 34 M58 24 H63" stroke="#d7443a" stroke-width="2"/></svg>`,
+};
+const DEVICES = [
+  {k:'roteador', nome:'Roteador doméstico (SOHO)', tag:'camadas 1 a 3 (e serviços)',
+   funcao:'Junta num só aparelho: roteador com NAT, switch de 3 ou 4 portas, ponto de acesso Wi-Fi, servidor DHCP e firewall simples.',
+   uso:'Casas e pequenos escritórios com até ~20 dispositivos.',
+   pros:'Barato, fácil de configurar pela interface web ou por aplicativo.',
+   contras:'Pouca capacidade, sem VLANs nem gerenciamento centralizado. Dois roteadores na mesma rede causam dupla NAT e conflito de DHCP.',
+   cfg:'SSID, WPA2/WPA3, canal, potência, LAN/DHCP, senha de administração, firmware, rede de convidados.',
+   sim:'Tipo "Roteador" no simulador; interface web em Configurar a rede.'},
+  {k:'comercial', nome:'Roteador comercial / de borda', tag:'camada 3',
+   funcao:'Liga a empresa ao provedor: roteamento entre redes e VLANs, firewall, VPN, QoS e, às vezes, balanceamento entre links.',
+   uso:'Empresas, escolas e provedores. Muitas vezes não tem rádio Wi-Fi: o Wi-Fi fica a cargo dos APs.',
+   pros:'Desempenho alto, recursos avançados, várias portas WAN/LAN.',
+   contras:'Configuração mais técnica (linha de comando ou interface avançada) e custo maior.',
+   cfg:'Interfaces, VLANs (sub-interfaces), rotas, NAT, regras de firewall, servidor DHCP por VLAN.',
+   sim:'Não aparece no mapa (não irradia), mas é ele que separa as VLANs dos SSIDs corporativos.'},
+  {k:'ap', nome:'Ponto de acesso (AP) comercial', tag:'camadas 1 e 2 (ponte)',
+   funcao:'Só cria a rede sem fio e a liga, como ponte, à rede cabeada. Não faz roteamento nem NAT.',
+   uso:'Ambientes com vários APs: escritórios, escolas, hotéis. Instalado no teto ou na parede.',
+   pros:'Alimentado por PoE (energia pelo cabo de rede), antenas otimizadas, vários SSIDs/VLANs, 802.1X, roaming, gerenciamento centralizado.',
+   contras:'Precisa de cabeamento até cada AP e, em geral, de controladora ou nuvem.',
+   cfg:'Pelo controlador: SSIDs, VLANs, canal, potência, PMF, WIDS. Localmente: IP de gerência.',
+   sim:'Tipo "AP" no simulador; controladora em Configurar a rede (escritório).'},
+  {k:'repetidor', nome:'Repetidor / extensor de alcance', tag:'camada 2',
+   funcao:'Recebe o sinal do roteador sem fio e o retransmite. O modelo de rádio único usa o mesmo canal para as duas coisas.',
+   uso:'Um cômodo sem sinal, quando não há cabo e o orçamento é baixo.',
+   pros:'Barato e simples: basta ligar na tomada e associar à rede.',
+   contras:'Divide o tempo de antena: a vazão cai para cerca da metade. Precisa ficar onde ainda há bom sinal do roteador. Clientes podem "grudar" no equipamento errado.',
+   cfg:'SSID e senha da rede principal (ou WPS, que deve ser desligado depois), posição e, opcionalmente, nome próprio.',
+   sim:'Tipo "Repetidor": veja a linha de backhaul e a taxa efetiva no painel do cliente.'},
+  {k:'mesh', nome:'Sistema mesh', tag:'camada 2',
+   funcao:'Vários nós que formam uma rede única, com o mesmo SSID. Os nós conversam entre si por um rádio dedicado (backhaul) ou por cabo.',
+   uso:'Casas grandes ou com muitas paredes, quando não há cabeamento.',
+   pros:'Roaming automático entre nós, configuração por aplicativo, perde menos vazão que o repetidor.',
+   contras:'Mais caro. Sem backhaul cabeado, cada salto ainda reduz a vazão.',
+   cfg:'Aplicativo do fabricante: posição dos nós, SSID, senha, rede de convidados.',
+   sim:'Tipo "Mesh": backhaul pelo rádio de 5 GHz dedicado.'},
+  {k:'controladora', nome:'Controladora WLAN (WLC) ou gerência em nuvem', tag:'gerência',
+   funcao:'Configura e monitora todos os APs de uma vez: SSIDs, VLANs, canais, potência, roaming, WIDS.',
+   uso:'Redes com mais de 3 ou 4 APs.',
+   pros:'Configuração única, plano automático de canais e potência (RRM), detecção de APs não autorizados.',
+   contras:'Custo de licença ou equipamento e ponto único de falha (se for local).',
+   cfg:'SSIDs, segurança, VLANs, RADIUS, grupos de APs, firmware.',
+   sim:'Interface de configuração do escritório.'},
+  {k:'switchpoe', nome:'Switch PoE', tag:'camada 2',
+   funcao:'Switch que fornece energia pelo cabo de rede (IEEE 802.3af/at/bt) aos APs, câmeras e telefones IP.',
+   uso:'Alimentar APs no teto sem tomada no local.',
+   pros:'Um único cabo leva dados e energia; facilita reiniciar APs remotamente.',
+   contras:'Orçamento de potência limitado por switch; cabos acima de 100 m não são suportados.',
+   cfg:'VLANs nas portas (tronco para os APs), orçamento PoE, prioridade das portas.',
+   sim:'Não aparece no mapa.'},
+  {k:'antena', nome:'Antenas: omnidirecional e direcional', tag:'camada 1',
+   funcao:'A omnidirecional irradia em todas as direções no plano horizontal. A direcional (painel, setorial, Yagi) concentra a energia numa direção, com ganho maior.',
+   uso:'Omni: APs internos. Direcional: enlaces ponto a ponto, corredores, áreas externas.',
+   pros:'O ganho (dBi) aumenta o alcance numa direção sem aumentar a potência.',
+   contras:'Ganho alto também pode aumentar a EIRP além do limite legal. Um atacante com antena direcional ouve a rede de longe.',
+   cfg:'Polarização (em pé = vertical), orientação e altura.',
+   sim:'Ganho da antena no AP; antena direcional do atacante na vista Exposição.'},
+];
+const QUIZ = [
+  {q:'Apartamento de 70 m², roteador da operadora na sala. Só o quarto do fundo fica sem sinal. O uso é navegação e o orçamento é mínimo.', r:'repetidor', exp:'Para um único ponto, com pouco uso e sem cabo, o repetidor resolve barato. Ele deve ficar a meio caminho, onde ainda há bom sinal.'},
+  {q:'Sobrado de 3 andares, sem cabeamento entre os andares. A família quer chamadas de vídeo sem quedas ao andar pela casa.', r:'mesh', exp:'O mesh dá roaming automático e, com backhaul dedicado, perde menos vazão que o repetidor.'},
+  {q:'Escritório de contabilidade com 25 funcionários, cabeamento estruturado até o teto e necessidade de rede de visitantes separada.', r:'ap', exp:'APs comerciais com PoE, vários SSIDs e VLANs, ligados ao switch. O roteamento fica com o roteador de borda.'},
+  {q:'Campus com 3 prédios e 60 APs. A equipe de TI precisa trocar o SSID de todos de uma vez e detectar APs piratas.', r:'controladora', exp:'Uma controladora (ou gerência em nuvem) configura e monitora todos os APs, com WIDS e plano automático de canais.'},
+  {q:'A empresa precisa ligar a rede ao provedor, separar as VLANs de funcionários e visitantes e criar regras de firewall entre elas.', r:'comercial', exp:'Roteamento entre VLANs, NAT e firewall são funções do roteador comercial (de borda).'},
+  {q:'Kitnet de 30 m² com um notebook, dois celulares e uma TV.', r:'roteador', exp:'Um roteador doméstico dual-band, bem posicionado e configurado com segurança, atende sozinho.'},
+  {q:'Os APs serão instalados no forro, onde não há tomadas.', r:'switchpoe', exp:'O switch PoE leva energia pelo próprio cabo de rede até o AP.'},
+];
+const QOPTS = [['roteador', 'Roteador doméstico'], ['comercial', 'Roteador comercial'], ['ap', 'AP comercial'], ['repetidor', 'Repetidor'], ['mesh', 'Mesh'], ['controladora', 'Controladora + APs'], ['switchpoe', 'Switch PoE']];
+let quizI = 0, quizOk = 0, quizDone = false;
+function renderQuiz() {
+  const box = $('#quizBox'); if (!box) return;
+  if (quizI >= QUIZ.length) { box.innerHTML = `<h3 style="margin:0">Resultado: ${quizOk} de ${QUIZ.length}</h3><div class="row"><button class="btn primary" id="qRe">Recomeçar</button></div>`; $('#qRe').onclick = () => { quizI = 0; quizOk = 0; quizDone = false; renderQuiz(); }; return; }
+  const it = QUIZ[quizI];
+  box.innerHTML = `<div class="hint">Situação ${quizI + 1} de ${QUIZ.length} · acertos: ${quizOk}</div><p style="font-size:15px;margin:6px 0"><b>${it.q}</b></p>
+    <div class="opts">${QOPTS.map(([k, t]) => `<button data-k="${k}">${t}</button>`).join('')}</div><div id="qFb"></div>`;
+  box.querySelectorAll('.opts button').forEach(b => b.onclick = () => {
+    if (quizDone) return; quizDone = true;
+    const ok = b.dataset.k === it.r; if (ok) quizOk++;
+    b.classList.add(ok ? 'right' : 'wrong');
+    box.querySelector(`.opts button[data-k="${it.r}"]`).classList.add('right');
+    $('#qFb').innerHTML = `<div class="msg ${ok ? 'ok' : 'warn'}">${ok ? 'Correto. ' : 'Melhor escolha: ' + QOPTS.find(o => o[0] === it.r)[1] + '. '}${it.exp}</div><button class="btn primary" id="qNx">Próxima</button>`;
+    $('#qNx').onclick = () => { quizI++; quizDone = false; renderQuiz(); };
+  });
+}
+function buildDispositivos() {
+  $('#dispBody').innerHTML = `
+  <h2 style="margin-top:4px">Dispositivos de uma WLAN</h2>
+  <p>Cada equipamento tem uma função. Saber qual usar, e como configurá-lo, é o primeiro passo da instalação. No simulador, use a ferramenta <b>+ AP</b> para instalar roteador, AP, repetidor ou nó mesh e comparar o efeito de cada um.</p>
+  <div class="devgrid">${DEVICES.map(d => `<div class="dev"><div class="hd">${DEV_ICON[d.k]}<div><h4>${d.nome}</h4><div class="tag">${d.tag}</div></div></div>
+    <dl><dt>Função</dt><dd>${d.funcao}</dd><dt>Onde usar</dt><dd>${d.uso}</dd><dt>Vantagens</dt><dd>${d.pros}</dd><dt>Limitações</dt><dd>${d.contras}</dd><dt>O que se configura</dt><dd>${d.cfg}</dd><dt>No simulador</dt><dd>${d.sim}</dd></dl></div>`).join('')}</div>
+
+  <h2>Como ampliar a cobertura: comparação</h2>
+  <table class="tbl"><tr><th>Solução</th><th>Ligação com o roteador</th><th>Vazão para o cliente</th><th>Roaming</th><th>Custo</th><th>Quando escolher</th></tr>
+    <tr><td>AP cabeado (ou roteador em modo AP)</td><td>Cabo de rede</td><td>Integral</td><td>Com o mesmo SSID; melhor com controladora</td><td>Médio</td><td>Sempre que for possível passar cabo</td></tr>
+    <tr><td>Mesh com backhaul dedicado</td><td>Rádio exclusivo de 5 GHz</td><td>Limitada pelo backhaul (menor dos dois enlaces)</td><td>Automático</td><td>Alto</td><td>Casas grandes sem cabo</td></tr>
+    <tr><td>Repetidor de rádio único</td><td>Mesmo rádio e canal dos clientes</td><td>≈ 1 / (1/acesso + 1/backhaul): cerca da metade</td><td>Limitado</td><td>Baixo</td><td>Um ponto isolado, uso leve</td></tr></table>
+  <p class="hint">Para conferir: na Residência, instale um repetidor e depois troque o tipo para Mesh ou AP. Compare a taxa efetiva no painel do cliente.</p>
+
+  <h2>Lendo a caixa do equipamento</h2>
+  <div class="grid2"><div>
+  <table class="tbl"><tr><th>Indicação</th><th>Significado</th></tr>
+    <tr><td>AC1200</td><td>Soma das taxas máximas: ≈ 300 Mbps em 2,4 GHz (802.11n 2×2, 40 MHz) + 867 Mbps em 5 GHz (802.11ac 2×2, 80 MHz). Um cliente nunca recebe 1200 Mbps.</td></tr>
+    <tr><td>AX3000</td><td>≈ 574 Mbps (2,4 GHz) + 2402 Mbps (5 GHz, 160 MHz), em Wi-Fi 6.</td></tr>
+    <tr><td>Dual-band / Tri-band</td><td>Dois ou três rádios simultâneos (ex.: 2,4 + 5 + 5 GHz; o terceiro costuma ser o backhaul do mesh).</td></tr>
+    <tr><td>2×2 MU-MIMO</td><td>2 antenas de transmissão e 2 de recepção; atende vários clientes ao mesmo tempo.</td></tr>
+    <tr><td>PoE 802.3af / at</td><td>Alimentação pelo cabo de rede: até 15,4 W / 30 W na porta do switch.</td></tr>
+    <tr><td>WPA3</td><td>Suporte à segurança mais recente (SAE, PMF obrigatório).</td></tr></table></div>
+  <div><h3 style="margin-top:0">Qual dispositivo usar?</h3><div class="quiz" id="quizBox"></div></div></div>`;
+  renderQuiz();
+}
+
+/* =====================================================================
+   10. NAVEGAÇÃO
+   ===================================================================== */
+function route() {
+  const h = (location.hash || '#residencia').slice(1);
+  const v = ['residencia', 'corporativo', 'dispositivos', 'laboratorio', 'conceitos'].includes(h) ? h : 'residencia';
+  document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('active', a.dataset.v === v));
+  document.querySelectorAll('section.view').forEach(s => s.classList.remove('active'));
+  if (v === 'residencia' || v === 'corporativo') {
+    $('#v-sim').classList.add('active');
+    if (env !== ENVS[v]) { env = ENVS[v]; ui.sel = null; anim.on = false; field = null; fieldKey = ''; rayKey = ''; }
+    layout(); updatePanels();
+  } else {
+    $('#v-' + v).classList.add('active');
+    if (v === 'laboratorio') drawLab();
+  }
+  try { localStorage.setItem('wifi-sim-tab', v); } catch (e) {}
+}
+window.addEventListener('hashchange', route);
+window.addEventListener('resize', () => { if ($('#v-sim').classList.contains('active')) layout(); });
+buildConceitos();
+buildDispositivos();
+route();
+</script>
+</body>
+</html>
