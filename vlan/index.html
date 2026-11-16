@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador de VLANs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f8;--card:#fff;--ink:#18212c;--mut:#5d6876;--line:#dbe1e7;--soft:#eef2f5;
+  --acc:#0e6a8c;--acc2:#e5f2f7;
+  --v10:#2457c5;--v10bg:#e3ebfb;--v20:#c77700;--v20bg:#fbefdc;
+  --learn:#0a8a5f;--drop:#b8282e;--route:#7a3fb5;--trunk:#3d4b58;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.5 'IBM Plex Sans',system-ui,sans-serif}
+header{padding:18px 22px 0;max-width:1160px;margin:0 auto}
+h1{font-size:22px;margin:0 0 2px}
+header p{margin:0;color:var(--mut)}
+nav{display:flex;gap:4px;margin-top:14px;border-bottom:1px solid var(--line)}
+nav button{border:0;background:none;padding:10px 16px;font:inherit;font-weight:600;color:var(--mut);cursor:pointer;border-bottom:3px solid transparent}
+nav button.on{color:var(--acc);border-bottom-color:var(--acc)}
+main{max-width:1160px;margin:0 auto;padding:16px 22px 44px}
+.tab{display:none}.tab.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+h3.lbl{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+code{font:13px var(--mono);background:var(--soft);padding:1px 5px;border-radius:4px}
+
+/* cenários */
+.scen{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.scen button{flex:1 1 200px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 13px;cursor:pointer;font:inherit;color:inherit}
+.scen button.on{border-color:var(--acc);background:var(--acc2);box-shadow:inset 0 0 0 1px var(--acc)}
+.scen button b{display:block;font-size:14.5px}
+.scen button small{color:var(--mut);font-size:12.5px;line-height:1.35;display:block;margin-top:1px}
+
+/* topologia */
+.stage{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px;align-items:stretch}
+@media (max-width:900px){.stage,.lower{grid-template-columns:1fr !important}}
+svg{width:100%;height:auto;display:block}
+.alink{stroke-width:3.5;stroke-linecap:round}
+.dev rect.box{fill:#fff;stroke:#9aa7b4;stroke-width:1.5;transition:stroke .2s,fill .3s}
+.dev.active rect.box{stroke:var(--acc);stroke-width:4}
+.dev.dim{opacity:.38}
+.dev .nm{font-weight:700;font-size:14px;fill:var(--ink)}
+.dev .vl{font-weight:600;font-size:11.5px}
+.dev .ad{font:11px var(--mono);fill:var(--mut)}
+.sw rect.body{fill:#26333f}
+.sw text.t{fill:#fff;font-weight:600;font-size:14px}
+.sw text.s{fill:#a9b8c6;font:11px var(--mono)}
+.port rect{stroke:#26333f;stroke-width:1.5;transition:stroke .2s,opacity .2s}
+.port text{fill:#fff;font:600 10.5px var(--mono);pointer-events:none}
+.port.in rect{stroke:#12b97f;stroke-width:4}
+.port.out rect{stroke:#ffc928;stroke-width:4}
+.port.cfg rect{stroke:#ffc928;stroke-width:4;stroke-dasharray:4 2}
+.port.warn rect{stroke:#ff4d55;stroke-width:4;animation:blink 1s infinite}
+.port.blk{opacity:.3}
+@keyframes blink{50%{stroke:#ffd0d2}}
+/* switch L3 */
+.l3t{font:700 13px 'IBM Plex Sans',sans-serif;fill:#26333f}
+.svi{font:600 9.5px 'IBM Plex Sans',sans-serif}
+.tl{font:600 11px 'IBM Plex Sans',sans-serif;fill:var(--mut)}
+.tl2{font:11px var(--mono);fill:var(--mut)}
+.tl2.mm{fill:var(--drop);font-weight:600}
+.pkt text.lb{fill:#fff;font:600 12px 'IBM Plex Sans',sans-serif}
+.pkt text.tg{font:700 10.5px var(--mono)}
+.mark{font:700 20px sans-serif}
+.mark.no{fill:var(--drop)}.mark.ok{fill:var(--learn)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--mut);margin:8px 2px 0}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend i.tr{background:linear-gradient(var(--v10) 0 45%,#fff 45% 55%,var(--v20) 55%)}
+.legend i.tagi{background:#fff;border:2px solid var(--v10);width:22px}
+.legend i.pin{background:#26333f;outline:3px solid #12b97f;outline-offset:-3px}
+.legend i.pout{background:#26333f;outline:3px solid #ffc928;outline-offset:-3px}
+
+/* narração */
+.narr{display:flex;flex-direction:column}
+.narr .badge{display:inline-block;align-self:flex-start;font:600 11px var(--mono);color:#fff;border-radius:5px;padding:3px 8px;margin-bottom:8px}
+.badge.info{background:#5d6876}.badge.v10{background:var(--v10)}.badge.v20{background:var(--v20)}
+.badge.tag{background:var(--trunk)}.badge.route{background:var(--route)}.badge.drop{background:var(--drop)}.badge.done{background:var(--learn)}
+.narr h2{font-size:17px;margin:0 0 7px}
+.narr p{margin:0 0 8px}
+.narr .hint{color:var(--mut);font-size:14px}
+.steps{margin-top:auto;padding-top:14px}
+.dots{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
+.dots i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--acc)}.dots i.past{background:#9fc3d4}
+.sbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-weight:600;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;cursor:pointer}
+.btn.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:hover:not(:disabled){filter:brightness(.96)}
+.stepno{margin-left:auto;font:12.5px var(--mono);color:var(--mut)}
+
+/* formato do quadro */
+.ef{margin-top:16px;padding:12px 16px}
+.efhead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#efbody{margin-top:10px}
+#efbody[hidden]{display:none}
+.tgl{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--mut);user-select:none;position:relative}
+.tgl input{position:absolute;opacity:0;width:0;height:0}
+.tgl .sl{width:36px;height:20px;border-radius:10px;background:#c2ccd5;position:relative;transition:background .2s}
+.tgl .sl::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.tgl input:checked+.sl{background:var(--acc)}
+.tgl input:checked+.sl::after{left:18px}
+.tgl input:focus-visible+.sl{outline:2px solid var(--acc);outline-offset:2px}
+.eflink{font-size:13.5px;margin-bottom:8px;color:var(--mut)}
+.eflink b{color:var(--ink)}
+.chip{display:inline-block;font:600 11.5px 'IBM Plex Sans',sans-serif;border-radius:5px;padding:1px 7px;color:#fff;margin-left:4px}
+.chip.t{background:var(--trunk)}.chip.u{background:#8a95a1}
+.efstrip{display:flex;border:1px solid #9aa7b4;border-radius:9px;overflow:hidden}
+.eff{flex:1 1 0;min-width:0;border:0;border-left:1px solid #c2ccd5;background:#fff;font:inherit;color:inherit;text-align:center;padding:7px 4px 8px;cursor:pointer;transition:background .25s}
+.eff:first-child{border-left:0}
+.eff:hover{background:var(--soft)}
+.eff.sel{box-shadow:inset 0 -3px 0 var(--acc)}
+.eff.hdr{background:#f3f8fb}
+.eff .fn{display:block;font-weight:600;font-size:12.5px;line-height:1.2}
+.eff .fb2{display:block;font:11px var(--mono);color:var(--mut);margin:1px 0 4px}
+.eff .fv{display:block;font:600 12px var(--mono);overflow-wrap:anywhere;line-height:1.25}
+.eff .fw{display:block;font-size:11px;color:var(--mut);margin-top:2px}
+.eff.tagf.off{background:repeating-linear-gradient(135deg,#f6f7f9 0 6px,#eef1f4 6px 12px);color:#8a95a1}
+.eff.tagf.off .fv{font-style:italic;font-weight:400;font-family:'IBM Plex Sans',sans-serif}
+.eff.tagf.on{background:#fff8e1}
+.eff.hl{box-shadow:inset 0 0 0 2px var(--acc)}
+.tsub{display:flex;gap:3px;justify-content:center;flex-wrap:wrap}
+.tsub i{font-style:normal;font-size:10.5px;color:var(--mut);border:1px solid #e2d6a8;border-radius:5px;padding:1px 5px;background:#fff;line-height:1.25}
+.tsub i b{display:block;font:600 12px var(--mono);color:var(--ink)}
+.efbr{display:flex;font-size:11.5px;color:var(--mut);margin-top:4px}
+.efbr span{text-align:center;border-top:2px solid #c2ccd5;padding-top:2px;margin:0 2px}
+.efinfo{font-size:14px;margin-top:10px;padding:10px 13px;border-radius:9px;background:var(--soft)}
+.efinfo b{color:var(--acc)}
+@media (max-width:900px){.efstrip{flex-wrap:wrap}.eff{flex:1 1 30%;border-top:1px solid #c2ccd5}.efbr{display:none}}
+
+/* painéis inferiores */
+.lower{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px;margin-top:16px}
+.ptgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:620px){.ptgrid{grid-template-columns:1fr}}
+.pth{font-weight:700;font-size:14px;margin-bottom:2px}
+.mt{width:100%;border-collapse:collapse;font-size:13px}
+.mt th{text-align:left;font:600 11.5px 'IBM Plex Sans',sans-serif;color:var(--mut);border-bottom:1px solid var(--line);padding:4px 4px}
+.mt td{padding:5px 4px;border-bottom:1px solid var(--soft);vertical-align:top;transition:background .2s}
+.mt td:first-child{font:600 13px var(--mono)}
+.mt td.who{color:#6d7885;font-size:12.5px}
+.mt .sm{color:var(--mut);font-size:11.5px}
+.vc{display:inline-block;color:#fff;font:600 11.5px var(--mono);border-radius:4px;padding:0 6px}
+.mt tr.r-in td{background:#e3f6ee}
+.mt tr.r-out td{background:#fff6d8}
+.mt tr.r-blk td{color:#a8b1bb;text-decoration:line-through}
+.mt tr.r-warn td,.mt tr.r-cfg td{background:#fde8e9}
+.mt tr.r-cfg td{background:#fff6d8}
+.nf{animation:fl 1.6s;border-radius:3px;padding:0 3px}
+@keyframes fl{0%{background:#ffd56a}100%{background:transparent}}
+.tnote{font-size:12.5px;color:var(--mut);margin:10px 0 0}
+.doms{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.doms div{flex:1 1 200px;font-size:13px;border-radius:8px;padding:6px 10px;border-left:4px solid}
+.fr{font-size:14px}
+.hdr3{display:grid;grid-template-columns:1fr 1fr auto;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:10px}
+.hdr3>div{padding:7px 10px;min-width:0}
+.hdr3>div+div{border-left:1px solid var(--line)}
+.hdr3 small{display:block;color:var(--mut);font-size:11.5px}
+.hdr3 b{font:600 12.5px var(--mono);overflow-wrap:anywhere}
+.hdr3 .who{font-size:12px;color:var(--mut)}
+.vchip{display:inline-block;color:#fff;border-radius:5px;padding:0 8px;font-size:14px !important}
+.whoh{font:700 13px 'IBM Plex Sans',sans-serif;color:#fff;background:#26333f;display:inline-block;border-radius:5px;padding:2px 9px;margin:2px 0 4px}
+.whoh.r{background:var(--route)}
+.fr .row{display:flex;gap:9px;align-items:flex-start;margin:8px 0}
+.fr .num{flex:0 0 22px;height:22px;border-radius:50%;background:var(--soft);color:var(--mut);font:600 12px var(--mono);display:flex;align-items:center;justify-content:center}
+.fr .row.done .num{background:var(--acc);color:#fff}
+.fr .row .k{font-weight:600}
+.fr .row .v{color:var(--mut)}
+.fr .row.done .v{color:var(--ink)}
+.fr .o{margin:2px 0}
+.fr .o.no{color:#9aa5b1}
+.empty{color:#9aa5b1;font-size:13.5px;font-style:italic;padding:8px 2px}
+
+/* quiz */
+.qwrap{max-width:780px}
+.qhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.score{font-size:15px;font-weight:600}
+.bar{height:8px;background:var(--soft);border-radius:5px;overflow:hidden;width:200px}
+.bar i{display:block;height:100%;background:var(--learn);width:0;transition:width .3s}
+.q{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px 17px;margin-bottom:12px}
+.q .qt{font-weight:600;margin-bottom:10px}
+.q .qt span{color:var(--acc);margin-right:6px}
+.opt{display:block;width:100%;text-align:left;font:inherit;border:1px solid var(--line);background:#fff;border-radius:9px;padding:10px 13px;margin:6px 0;cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--acc);background:var(--acc2)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--learn);background:#e5f6ef}
+.opt.wrong{border-color:#cc2b2b;background:#fdeaea}
+.fb{display:none;margin-top:8px;font-size:14px;padding:10px 13px;border-radius:9px;background:var(--soft)}
+.fb.show{display:block}
+.fb b.ok{color:var(--learn)}.fb b.no{color:#cc2b2b}
+</style>
+</head>
+<body>
+  <a href="../" style="position:fixed;right:14px;bottom:14px;z-index:9999;background:#18212c;color:#fff;font:600 13px/1 'IBM Plex Sans',system-ui,sans-serif;text-decoration:none;padding:9px 13px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.18)">← Todos os simuladores</a>
+<header>
+  <h1>Simulador de VLANs</h1>
+  <p>Avance passo a passo e veja como as VLANs dividem a rede: portas de acesso e trunk, tag 802.1Q, VLAN nativa, domínios de broadcast e roteamento entre VLANs com switch camada 3.</p>
+  <nav>
+    <button class="on" data-tab="sim">Simulador</button>
+    <button data-tab="quiz">Quiz</button>
+  </nav>
+</header>
+<main>
+<section id="sim" class="tab on">
+  <div class="scen" id="scen"></div>
+  <div class="stage">
+    <div class="card" style="padding:10px">
+      <svg id="svg" viewBox="0 0 800 440" role="img" aria-label="Topologia: switch de núcleo camada 3 (SW1) com interfaces VLAN, ligado por trunks a dois switches de acesso camada 2 (SW2 e SW3), com quatro computadores em duas VLANs">
+        <g id="links"></g><g id="tlbl"></g><g id="devs"></g><g id="pkts"></g>
+      </svg>
+      <div class="legend">
+        <span><i style="background:var(--v10)"></i>VLAN 10 · Vendas</span>
+        <span><i style="background:var(--v20)"></i>VLAN 20 · TI</span>
+        <span><i class="tr"></i>Trunk (leva as duas VLANs)</span>
+        <span><i class="tagi"></i>Quadro com tag 802.1Q</span>
+        <span><i class="pin"></i>Porta de entrada</span>
+        <span><i class="pout"></i>Porta de saída</span>
+      </div>
+    </div>
+    <div class="card narr">
+      <span class="badge info" id="badge">Início</span>
+      <h2 id="stTitle">Escolha um cenário acima</h2>
+      <p id="stText"></p>
+      <p class="hint" id="stHint"></p>
+      <div class="steps">
+        <div class="dots" id="dots"></div>
+        <div class="sbtns">
+          <button class="btn" id="prevBtn">◀ Anterior</button>
+          <button class="btn pri" id="nextBtn">Próximo ▶</button>
+          <button class="btn" id="restartBtn">Reiniciar</button>
+          <span class="stepno" id="stepNo"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card ef">
+    <div class="efhead">
+      <h3 class="lbl" style="margin:0">Formato do quadro · com ou sem a tag 802.1Q</h3>
+      <label class="tgl"><input type="checkbox" id="efToggle"><span class="sl"></span><span id="efTglTxt">Ocultar</span></label>
+    </div>
+    <div id="efbody">
+      <div class="eflink" id="eflink"></div>
+      <div class="efstrip" id="efstrip"></div>
+      <div class="efbr">
+        <span style="flex:6.95">cabeçalho: 14 bytes (18 com a tag)</span><span style="flex:1.3">carga útil</span><span style="flex:.8">trailer</span>
+      </div>
+      <div class="efinfo" id="efinfo"></div>
+    </div>
+  </div>
+
+  <div class="lower">
+    <div class="card">
+      <h3 class="lbl">Configuração das portas</h3>
+      <div class="ptgrid" id="ptab"></div>
+      <div class="doms">
+        <div style="border-color:var(--v10);background:var(--v10bg)"><b>Domínio de broadcast da VLAN 10</b><br>PC-A, PC-C e a interface VLAN 10 do SW1 · 192.168.10.0/24</div>
+        <div style="border-color:var(--v20);background:var(--v20bg)"><b>Domínio de broadcast da VLAN 20</b><br>PC-B, PC-D e a interface VLAN 20 do SW1 · 192.168.20.0/24</div>
+      </div>
+      <p class="tnote">Porta de acesso: uma VLAN só, quadros sem tag. Trunk: várias VLANs no mesmo cabo (aqui, 10 e 20), cada quadro com a tag da sua VLAN, menos os da VLAN nativa, que passam sem tag.</p>
+    </div>
+    <div class="card fr">
+      <h3 class="lbl">Decisão do equipamento</h3>
+      <div id="frame"></div>
+    </div>
+  </div>
+</section>
+
+<section id="quiz" class="tab">
+ <div class="qwrap">
+  <div class="qhead">
+   <div><div class="score" id="score">0 de 0 respondidas</div><div class="bar"><i id="scoreBar"></i></div></div>
+   <button class="btn" id="quizReset">Refazer o quiz</button>
+  </div>
+  <div id="qlist"></div>
+ </div>
+</section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
